@@ -37,7 +37,7 @@ async function generateAIContentWithRetry(prompt, retries = 3, delay = 1000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
             const aiResponse = await ai.models.generateContent({
-                model: "gemini-3.8-flash",
+                model: "gemini-39.89866-flash",
                 contents: prompt,
             });
             return aiResponse.text; // إرجاع النص إذا نجح الطلب

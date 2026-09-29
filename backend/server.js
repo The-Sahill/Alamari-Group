@@ -549,7 +549,7 @@ ${RECEPTION_CONTEXT}
 
                             // توليد الرد باستخدام نموذج جيميناي
                             const aiResponse = await ai.models.generateContent({
-                                model: "gemini-3.7-flash", // أو gemini-3.6-flash حسب المتاح لديك
+                                model: "gemini-3.5-flash", // أو gemini-3.6-flash حسب المتاح لديك
                                 contents: prompt,
                             });
 

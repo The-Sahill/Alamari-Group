@@ -7,8 +7,6 @@ const { getPrompt } = require('./controllers/prompt');
 const app = express();
 app.use(bodyParser.json());
 
-const PHONE_NUMBER_ID = '1328425043688424'; 
-const ACCESS_TOKEN = 'EAAXC7VrGWOQBSj9ZBmZBhTqF14avsAbngIyrFHSAZBrRsJamNjNboQpvVftNuMaVtKRkkHkiYJCoGoIt67SW4Y2g1Mdi94zMADWeXrNfYH5ZAZCgyH6DjoZAQi3EjcDcIcWETabrzCnZAB3Nhyplztqn8ZBIsAlLBGaRHZCJpt5mBsCnDQZByPvZCnTHcptxmTGHcTVgwZDZD'; 
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -18,9 +16,9 @@ const ai = new GoogleGenAI({
 async function sendWhatsAppMessage(recipientID, text) {
     await axios({
         method: 'POST',
-        url: `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`,
+        url: `https://graph.facebook.com/v20.0/${process.env.PHONE_NUMBER_ID}/messages`,
         headers: {
-            'Authorization': `Bearer ${ACCESS_TOKEN}`,
+            'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`,
             'Content-Type': 'application/json',
         },
         data: {
@@ -53,7 +51,7 @@ async function generateAIContentWithRetry(prompt, retries = 3, delay = 1000) {
 }
 
 app.get('/webhook', (req, res) => {
-    const VERIFY_TOKEN = "yhihkuhyga"; 
+    const VERIFY_TOKEN = "hjfjggftyditdk"; 
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];

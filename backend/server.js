@@ -77,6 +77,23 @@ app.get('/webhook', (req, res) => {
 
 app.post('/api/appsheet/ai-action', async (req, res) => {
     try {
+
+    const webhookSecret = req.headers['x-appsheet-secret'];
+
+    if (
+        !process.env.APPSHEET_WEBHOOK_SECRET ||
+        webhookSecret !== process.env.APPSHEET_WEBHOOK_SECRET
+    ) {
+        console.warn('Unauthorized AppSheet request');
+        return res.status(401).json({
+            success: false,
+            error: 'Unauthorized'
+        });
+    }
+
+
+
+
         const action = req.body;
 
         console.log('AppSheet AI Action received:', {

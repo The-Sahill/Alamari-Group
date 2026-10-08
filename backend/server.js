@@ -51,7 +51,7 @@ async function generateAIContentWithRetry(prompt, retries = 3, delay = 1000) {
 }
 
 app.get('/webhook', (req, res) => {
-    const VERIFY_TOKEN = "hjfjggftyditdk"; 
+    const VERIFY_TOKEN = "yhihkuhyga"; 
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -67,6 +67,64 @@ app.get('/webhook', (req, res) => {
         res.sendStatus(400);
     }
 });
+
+
+
+
+// =====================================================
+// AppSheet AI Actions Endpoint
+// =====================================================
+
+app.post('/api/appsheet/ai-action', async (req, res) => {
+    try {
+        const action = req.body;
+
+        console.log('AppSheet AI Action received:', {
+            AI_Action_ID: action.AI_Action_ID,
+            User_Type: action.User_Type,
+            Channel: action.Channel,
+            Requested_Action: action.Requested_Action,
+            Target_Table: action.Target_Table,
+            Target_Record_ID: action.Target_Record_ID,
+            Risk_Level: action.Risk_Level,
+            Execution_Status: action.Execution_Status
+        });
+
+        // التأكد من وجود رقم العملية
+        if (!action.AI_Action_ID) {
+            return res.status(400).json({
+                success: false,
+                error: 'AI_Action_ID is required'
+            });
+        }
+
+        // في المرحلة الأولى:
+        // نستقبل الطلب فقط ونتأكد أن AppSheet متصل بالـ Backend.
+        // لن ننفذ أي تعديل على البيانات حتى نكمل طبقة الأمان والموافقات.
+
+        return res.status(200).json({
+            success: true,
+            message: 'AI action received successfully',
+            AI_Action_ID: action.AI_Action_ID,
+            status: 'received'
+        });
+
+    } catch (error) {
+        console.error('AppSheet AI Action error:', error);
+
+        return res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+
+
+
+
+
+
 
 app.post('/webhook', async (req, res) => {
     const body = req.body;
@@ -96,11 +154,11 @@ app.post('/webhook', async (req, res) => {
                             try {
                                 // محاولة جلب الرد مع آلية إعادة المحاولة (3 مرات)
                                 const aiText = await generateAIContentWithRetry(prompt, 3, 1000);
-                                replyText = aiText || "أهلاً بك في منصة سوقية، كيف يمكنني مساعدتك اليوم؟";
+                                replyText = aiText || "أهلاً بك في  الامعري جروب كيف يمكنني مساعدتك اليوم؟";
                             } catch (aiError) {
                                 // إذا فشلت الـ 3 محاولات، يتم اعتماد الرسالة الثابتة للطوارئ
                                 console.error('فشلت جميع محاولات الاتصال بالذكاء الاصطناعي:', aiError.message);
-                                replyText = "يوجد عطل فني في الرد التلقائي من الرد الآلي للحجوزات و الاستفسار يرجى التواصل على الرقم 00962791772424";
+                                replyText = "يوجد عطل فني في الرد التلقائي من الرد  الالي";
                             }
 
                             // إرسال الرد للعميل

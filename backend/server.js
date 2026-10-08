@@ -75,8 +75,6 @@ app.get('/webhook', (req, res) => {
 // AppSheet AI Actions Endpoint
 // =====================================================
 
-
-
 async function analyzeAppSheetAction(action) {
     const prompt = `
 أنت محرك ذكاء اصطناعي لنظام إدارة Alamari Group.
@@ -139,15 +137,20 @@ async function analyzeAppSheetAction(action) {
 }
 
 
+// ======================================================
 // التحقق من بنية نتيجة الذكاء الاصطناعي
+// ======================================================
+
 function validateAIAnalysis(aiResult) {
 
-    // التأكد أن النتيجة Object
-    if (!aiResult || typeof aiResult !== 'object' || Array.isArray(aiResult)) {
+    if (
+        !aiResult ||
+        typeof aiResult !== 'object' ||
+        Array.isArray(aiResult)
+    ) {
         throw new Error('AI analysis is not a valid object');
     }
 
-    // الحقول التي يجب أن يعيدها الذكاء الاصطناعي
     const requiredFields = [
         'intent',
         'requested_action',
@@ -158,14 +161,14 @@ function validateAIAnalysis(aiResult) {
         'summary'
     ];
 
-    // التأكد من وجود جميع الحقول
     for (const field of requiredFields) {
         if (!(field in aiResult)) {
-            throw new Error(`Missing AI analysis field: ${field}`);
+            throw new Error(
+                `Missing AI analysis field: ${field}`
+            );
         }
     }
 
-    // مستويات الخطورة المسموح بها
     const allowedRiskLevels = [
         'low',
         'medium',
@@ -178,14 +181,12 @@ function validateAIAnalysis(aiResult) {
         );
     }
 
-    // confirmation_required يجب أن تكون Boolean
     if (typeof aiResult.confirmation_required !== 'boolean') {
         throw new Error(
             'confirmation_required must be boolean'
         );
     }
 
-    // التحقق من نوع الحقول النصية
     const stringFields = [
         'intent',
         'requested_action',
@@ -206,18 +207,258 @@ function validateAIAnalysis(aiResult) {
 }
 
 
+// ======================================================
+// Security Policy
+// القواعد هنا يفرضها السيرفر وليس Gemini
+// ======================================================
+
+const AI_SECURITY_POLICY = {
+
+    DEALS: {
+
+        // مفتاح الجدول
+        keyField: 'Deal_ID',
+
+        // حقول لا يسمح للذكاء الاصطناعي بتعديلها مباشرة
+        protectedFields: [
+            '_RowNumber',
+            'Deal_ID',
+            'Created_At',
+            'Updated_At',
+
+            'Related المعاينات',
+            'Related المهام',
+            'Related التواصل',
+            'Related المستندات',
+
+            'deal-display',
+            'Stage_AR',
+            'Status_AR'
+        ],
+
+        // الحقول المالية تعتبر حساسة
+        financialFields: [
+            'Expected_Value',
+            'Expected_Commission',
+            'Final_Commission',
+            'Final_Value',
+            'Currency'
+        ],
+
+        // الحالات النهائية والحساسة
+        sensitiveStatuses: [
+            'مغلقة - ناجحة',
+            'مغلقة - خاسرة',
+            'مؤرشفة'
+        ],
+
+        // مراحل الصفقة المسموح بها
+        allowedStages: [
+            'عميل جديد',
+            'تم التواصل',
+            'مؤهل',
+            'تم اقتراح عقارات',
+            'معاينة',
+            'تفاوض',
+            'عرض',
+            'عقد',
+            'مغلقة - ناجحة',
+            'مغلقة - خاسرة'
+        ],
+
+        // حالات الصفقة المسموح بها
+        allowedStatuses: [
+            'نشطة',
+            'معلقة',
+            'مغلقة - ناجحة',
+            'مغلقة - خاسرة',
+            'مؤرشفة'
+        ]
+    }
+};
+
+
+// ======================================================
+// تقييم أمان طلب الذكاء الاصطناعي
+// هذه الدالة لا تنفذ أي تعديل
+// ======================================================
+
+function evaluateAISecurity(action, aiResult) {
+
+    const targetTable = String(
+        aiResult.target_table ||
+        action.Target_Table ||
+        ''
+    ).trim().toUpperCase();
+
+    const requestedAction = String(
+        aiResult.requested_action ||
+        action.Requested_Action ||
+        ''
+    ).trim().toLowerCase();
+
+    const securityResult = {
+        allowed: false,
+        target_table: targetTable,
+        server_risk_level: 'high',
+        confirmation_required: true,
+        execution_allowed_now: false,
+        reason: ''
+    };
+
+
+    // ------------------------------------------
+    // 1. يجب تحديد الجدول
+    // ------------------------------------------
+
+    if (!targetTable) {
+        securityResult.reason = 'Target table is missing';
+        return securityResult;
+    }
+
+
+    // ------------------------------------------
+    // 2. رفض أي جدول غير موجود في Security Policy
+    // ------------------------------------------
+
+    const tablePolicy = AI_SECURITY_POLICY[targetTable];
+
+    if (!tablePolicy) {
+        securityResult.reason =
+            `Target table is not allowed: ${targetTable}`;
+
+        return securityResult;
+    }
+
+
+    // ------------------------------------------
+    // 3. منع الحذف
+    // ------------------------------------------
+
+    const deleteKeywords = [
+        'delete',
+        'remove',
+        'erase',
+        'حذف',
+        'احذف',
+        'إزالة'
+    ];
+
+    const isDeleteRequest = deleteKeywords.some(
+        keyword => requestedAction.includes(keyword)
+    );
+
+    if (isDeleteRequest) {
+        securityResult.allowed = false;
+        securityResult.server_risk_level = 'high';
+        securityResult.confirmation_required = true;
+        securityResult.execution_allowed_now = false;
+        securityResult.reason =
+            'AI deletion is blocked by server security policy';
+
+        return securityResult;
+    }
+
+
+    // ------------------------------------------
+    // 4. القراءة والبحث
+    // ------------------------------------------
+
+    const readKeywords = [
+        'read',
+        'get',
+        'find',
+        'search',
+        'list',
+        'view',
+        'query',
+        'lookup',
+        'عرض',
+        'بحث',
+        'ابحث',
+        'قراءة',
+        'اقرأ',
+        'استعلام'
+    ];
+
+    const isReadRequest = readKeywords.some(
+        keyword => requestedAction.includes(keyword)
+    );
+
+    if (isReadRequest) {
+        securityResult.allowed = true;
+        securityResult.server_risk_level = 'low';
+        securityResult.confirmation_required = false;
+
+        // ما زلنا لا ننفذ في هذه المرحلة
+        securityResult.execution_allowed_now = false;
+
+        securityResult.reason =
+            'Read-only request allowed by server policy';
+
+        return securityResult;
+    }
+
+
+    // ------------------------------------------
+    // 5. طلب غير واضح
+    // ------------------------------------------
+
+    if (
+        !requestedAction ||
+        requestedAction === 'none' ||
+        requestedAction === 'unknown'
+    ) {
+        securityResult.allowed = false;
+        securityResult.server_risk_level = 'medium';
+        securityResult.confirmation_required = true;
+        securityResult.execution_allowed_now = false;
+        securityResult.reason =
+            'Requested action is missing or unclear';
+
+        return securityResult;
+    }
+
+
+    // ------------------------------------------
+    // 6. أي تعديل حاليًا يحتاج تأكيد
+    // ------------------------------------------
+
+    securityResult.allowed = true;
+    securityResult.server_risk_level = 'medium';
+    securityResult.confirmation_required = true;
+    securityResult.execution_allowed_now = false;
+    securityResult.reason =
+        'Write operation requires confirmation and further validation';
+
+    return securityResult;
+}
+
+
+
+// ======================================================
+// AppSheet AI Action Endpoint
+// ======================================================
 
 app.post('/api/appsheet/ai-action', async (req, res) => {
+
     try {
 
-        // التحقق من المفتاح السري القادم من AppSheet
-        const webhookSecret = req.headers['x-appsheet-secret'];
+        // ------------------------------------------
+        // التحقق من المفتاح السري
+        // ------------------------------------------
+
+        const webhookSecret =
+            req.headers['x-appsheet-secret'];
 
         if (
             !process.env.APPSHEET_WEBHOOK_SECRET ||
             webhookSecret !== process.env.APPSHEET_WEBHOOK_SECRET
         ) {
-            console.warn('Unauthorized AppSheet request');
+
+            console.warn(
+                'Unauthorized AppSheet request'
+            );
 
             return res.status(401).json({
                 success: false,
@@ -225,51 +466,138 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             });
         }
 
+
         const action = req.body;
 
-        console.log('AppSheet AI Action received:', {
-            AI_Action_ID: action.AI_Action_ID,
-            User_Type: action.User_Type,
-            Channel: action.Channel,
-            Requested_Action: action.Requested_Action,
-            Target_Table: action.Target_Table,
-            Target_Record_ID: action.Target_Record_ID,
-            Risk_Level: action.Risk_Level,
-            Execution_Status: action.Execution_Status
-        });
 
+        // ------------------------------------------
+        // تسجيل البيانات الأساسية فقط
+        // ------------------------------------------
+
+        console.log(
+            'AppSheet AI Action received:',
+            {
+                AI_Action_ID:
+                    action.AI_Action_ID,
+
+                User_Type:
+                    action.User_Type,
+
+                Channel:
+                    action.Channel,
+
+                Requested_Action:
+                    action.Requested_Action,
+
+                Target_Table:
+                    action.Target_Table,
+
+                Target_Record_ID:
+                    action.Target_Record_ID,
+
+                Risk_Level:
+                    action.Risk_Level,
+
+                Execution_Status:
+                    action.Execution_Status
+            }
+        );
+
+
+        // ------------------------------------------
         // التأكد من وجود رقم العملية
+        // ------------------------------------------
+
         if (!action.AI_Action_ID) {
+
             return res.status(400).json({
                 success: false,
                 error: 'AI_Action_ID is required'
             });
         }
 
-        // تحليل الطلب فقط بواسطة الذكاء الاصطناعي
-        // لا يتم تنفيذ أي تعديل على البيانات في هذه المرحلة
-        console.log('بدء تحليل طلب AppSheet بواسطة AI...');
 
-        const aiResult = await analyzeAppSheetAction(action);
+        // ------------------------------------------
+        // تحليل الطلب بواسطة Gemini
+        // ------------------------------------------
 
-        // التحقق من سلامة نتيجة الذكاء الاصطناعي
+        console.log(
+            'بدء تحليل طلب AppSheet بواسطة AI...'
+        );
+
+        const aiResult =
+            await analyzeAppSheetAction(action);
+
+
+        // ------------------------------------------
+        // التحقق من JSON القادم من Gemini
+        // ------------------------------------------
+
         validateAIAnalysis(aiResult);
 
-        console.log('AI Analysis Result:', aiResult);
-        console.log('AI Analysis validation: PASSED');
+        console.log(
+            'AI Analysis Result:',
+            aiResult
+        );
 
-        // إرجاع نتيجة التحليل إلى AppSheet
+        console.log(
+            'AI Analysis validation: PASSED'
+        );
+
+
+        // ------------------------------------------
+        // تطبيق Security Policy الخاصة بالسيرفر
+        // ------------------------------------------
+
+        const securityResult =
+            evaluateAISecurity(action, aiResult);
+
+        console.log(
+            'Server Security Decision:',
+            securityResult
+        );
+
+
+        // ------------------------------------------
+        // لا يوجد تنفيذ فعلي حتى الآن
+        // ------------------------------------------
+
+        console.log(
+            'Execution blocked: analysis/security phase only'
+        );
+
+
+        // ------------------------------------------
+        // إرجاع نتيجة التحليل + قرار السيرفر
+        // ------------------------------------------
+
         return res.status(200).json({
+
             success: true,
-            message: 'AI action analyzed successfully',
-            AI_Action_ID: action.AI_Action_ID,
-            status: 'analyzed',
-            analysis: aiResult
+
+            message:
+                'AI action analyzed and checked by server security policy',
+
+            AI_Action_ID:
+                action.AI_Action_ID,
+
+            status:
+                'security_checked',
+
+            analysis:
+                aiResult,
+
+            security:
+                securityResult
         });
+
 
     } catch (error) {
 
-        console.error('AppSheet AI Action error:', error);
+        console.error(
+            'AppSheet AI Action error:',
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -277,7 +605,6 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
         });
     }
 });
-
 
 
 

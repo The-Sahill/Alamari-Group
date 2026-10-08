@@ -101,7 +101,7 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
         // في المرحلة الأولى:
         // نستقبل الطلب فقط ونتأكد أن AppSheet متصل بالـ Backend.
         // لن ننفذ أي تعديل على البيانات حتى نكمل طبقة الأمان والموافقات.
-
+console.log('تم استلام طلب AppSheet AI Action بنجاح. لم يتم تنفيذ أي تعديل على البيانات بعد.');
         return res.status(200).json({
             success: true,
             message: 'AI action received successfully',

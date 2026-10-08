@@ -1,8 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const { GoogleGenAI } = require('@google/genai'); 
-const { getPrompt } = require('./controllers/prompt'); 
+const { GoogleGenAI } = require('@google/genai');
+const { getPrompt } = require('./controllers/prompt');
 
 const app = express();
 app.use(bodyParser.json());
@@ -51,7 +51,7 @@ async function generateAIContentWithRetry(prompt, retries = 3, delay = 1000) {
 }
 
 app.get('/webhook', (req, res) => {
-    const VERIFY_TOKEN = "yhihkuhyga"; 
+    const VERIFY_TOKEN = "yhihkuhyga";
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -77,9 +77,13 @@ app.get('/webhook', (req, res) => {
 
 async function analyzeAppSheetAction(action) {
     const prompt = `
-أنت محرك ذكاء اصطناعي لنظام إدارة Alamari Group.
+أنت محرك فهم طلبات لنظام إدارة Alamari Group.
 
-حلل الطلب القادم من AppSheet.
+مهمتك تحليل الطلب القادم من AppSheet وتحويله إلى خطة منظمة فقط.
+
+ممنوع عليك تنفيذ أي تعديل.
+ممنوع افتراض بيانات غير موجودة في الطلب.
+إذا كان الطلب غير واضح، استخدم operation = "unknown".
 
 بيانات الطلب:
 نوع المستخدم: ${action.User_Type || ''}
@@ -93,19 +97,58 @@ async function analyzeAppSheetAction(action) {
 الإجراء المطلوب: ${action.Requested_Action || ''}
 الجدول المستهدف: ${action.Target_Table || ''}
 السجل المستهدف: ${action.Target_Record_ID || ''}
-مستوى الخطورة: ${action.Risk_Level || ''}
-هل يحتاج تأكيد: ${action.Confirmation_Required || ''}
+مستوى الخطورة القادم من AppSheet: ${action.Risk_Level || ''}
+هل يحتاج تأكيد حسب AppSheet: ${action.Confirmation_Required || ''}
 حالة التأكيد: ${action.Confirmation_Status || ''}
 
-مهمتك الآن هي فهم الطلب وتحليله فقط.
-لا تنفذ أي تعديل على البيانات.
+العمليات المسموح لك باقتراحها فقط:
+- read
+- create
+- update
+- delete
+- unknown
 
-أرجع النتيجة بصيغة JSON فقط بالشكل التالي:
+إذا كان operation = "update":
+ضع فقط الحقول التي طلب المستخدم تغييرها داخل changes.
+
+إذا لم يطلب المستخدم تغيير أي حقل:
+اجعل changes كائنًا فارغًا {}.
+
+إذا كان الطلب يستهدف DEALS، استخدم أسماء الأعمدة الأصلية فقط مثل:
+Person_ID
+Requirement_ID
+Transaction_Type
+Property_ID
+Unit_ID
+Assigned_Employee_ID
+Pipeline
+Stage
+Expected_Value
+Currency
+Expected_Commission
+Final_Commission
+Final_Value
+Probability
+Lead_Source
+Last_Contact_At
+Next_Action
+Next_Action_Date
+Lost_Reason
+Closed_Date
+Status
+
+لا تستخدم الأعمدة الافتراضية أو Related.
+لا تخترع Deal_ID أو أي معرف غير موجود في الطلب.
+
+أرجع JSON فقط بهذا الشكل:
+
 {
   "intent": "",
+  "operation": "unknown",
   "requested_action": "",
   "target_table": "",
   "target_record_id": "",
+  "changes": {},
   "risk_level": "low",
   "confirmation_required": false,
   "summary": ""
@@ -117,7 +160,6 @@ async function analyzeAppSheetAction(action) {
         contents: prompt,
     });
 
-    // تنظيف رد Gemini من علامات Markdown
     const rawText = response.text
         .replace(/```json/gi, '')
         .replace(/```/g, '')
@@ -125,7 +167,6 @@ async function analyzeAppSheetAction(action) {
 
     let parsedResult;
 
-    // تحويل النص إلى JSON حقيقي
     try {
         parsedResult = JSON.parse(rawText);
     } catch (error) {
@@ -622,11 +663,11 @@ app.post('/webhook', async (req, res) => {
                 for (const change of entry.changes) {
                     if (change.field === 'messages') {
                         const value = change.value;
-                        
+
                         if (value.messages && value.messages.length > 0) {
                             const message = value.messages[0];
-                            const senderID = message.from; 
-                            const messageText = message.text ? message.text.body : ''; 
+                            const senderID = message.from;
+                            const messageText = message.text ? message.text.body : '';
 
                             if (!messageText) continue;
 

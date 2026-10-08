@@ -77,7 +77,6 @@ app.get('/webhook', (req, res) => {
 
 
 
-
 async function analyzeAppSheetAction(action) {
     const prompt = `
 أنت محرك ذكاء اصطناعي لنظام إدارة Alamari Group.
@@ -140,6 +139,73 @@ async function analyzeAppSheetAction(action) {
 }
 
 
+// التحقق من بنية نتيجة الذكاء الاصطناعي
+function validateAIAnalysis(aiResult) {
+
+    // التأكد أن النتيجة Object
+    if (!aiResult || typeof aiResult !== 'object' || Array.isArray(aiResult)) {
+        throw new Error('AI analysis is not a valid object');
+    }
+
+    // الحقول التي يجب أن يعيدها الذكاء الاصطناعي
+    const requiredFields = [
+        'intent',
+        'requested_action',
+        'target_table',
+        'target_record_id',
+        'risk_level',
+        'confirmation_required',
+        'summary'
+    ];
+
+    // التأكد من وجود جميع الحقول
+    for (const field of requiredFields) {
+        if (!(field in aiResult)) {
+            throw new Error(`Missing AI analysis field: ${field}`);
+        }
+    }
+
+    // مستويات الخطورة المسموح بها
+    const allowedRiskLevels = [
+        'low',
+        'medium',
+        'high'
+    ];
+
+    if (!allowedRiskLevels.includes(aiResult.risk_level)) {
+        throw new Error(
+            `Invalid AI risk level: ${aiResult.risk_level}`
+        );
+    }
+
+    // confirmation_required يجب أن تكون Boolean
+    if (typeof aiResult.confirmation_required !== 'boolean') {
+        throw new Error(
+            'confirmation_required must be boolean'
+        );
+    }
+
+    // التحقق من نوع الحقول النصية
+    const stringFields = [
+        'intent',
+        'requested_action',
+        'target_table',
+        'target_record_id',
+        'summary'
+    ];
+
+    for (const field of stringFields) {
+        if (typeof aiResult[field] !== 'string') {
+            throw new Error(
+                `AI analysis field ${field} must be a string`
+            );
+        }
+    }
+
+    return true;
+}
+
+
 
 app.post('/api/appsheet/ai-action', async (req, res) => {
     try {
@@ -186,7 +252,11 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 
         const aiResult = await analyzeAppSheetAction(action);
 
+        // التحقق من سلامة نتيجة الذكاء الاصطناعي
+        validateAIAnalysis(aiResult);
+
         console.log('AI Analysis Result:', aiResult);
+        console.log('AI Analysis validation: PASSED');
 
         // إرجاع نتيجة التحليل إلى AppSheet
         return res.status(200).json({

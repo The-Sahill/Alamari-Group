@@ -78,8 +78,6 @@ app.get('/webhook', (req, res) => {
 
 
 
-
-
 async function analyzeAppSheetAction(action) {
     const prompt = `
 أنت محرك ذكاء اصطناعي لنظام إدارة Alamari Group.
@@ -122,39 +120,46 @@ async function analyzeAppSheetAction(action) {
         contents: prompt,
     });
 
-    return response.text;
+    // تنظيف رد Gemini من علامات Markdown
+    const rawText = response.text
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+    let parsedResult;
+
+    // تحويل النص إلى JSON حقيقي
+    try {
+        parsedResult = JSON.parse(rawText);
+    } catch (error) {
+        console.error('Failed to parse AI JSON:', rawText);
+        throw new Error('Invalid JSON returned from AI');
+    }
+
+    return parsedResult;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 app.post('/api/appsheet/ai-action', async (req, res) => {
     try {
 
-    const webhookSecret = req.headers['x-appsheet-secret'];
+        // التحقق من المفتاح السري القادم من AppSheet
+        const webhookSecret = req.headers['x-appsheet-secret'];
 
-    if (
-        !process.env.APPSHEET_WEBHOOK_SECRET ||
-        webhookSecret !== process.env.APPSHEET_WEBHOOK_SECRET
-    ) {
-        console.warn('Unauthorized AppSheet request');
-        return res.status(401).json({
-            success: false,
-            error: 'Unauthorized'
-        });
-    }
-  const action = req.body;
+        if (
+            !process.env.APPSHEET_WEBHOOK_SECRET ||
+            webhookSecret !== process.env.APPSHEET_WEBHOOK_SECRET
+        ) {
+            console.warn('Unauthorized AppSheet request');
+
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized'
+            });
+        }
+
+        const action = req.body;
 
         console.log('AppSheet AI Action received:', {
             AI_Action_ID: action.AI_Action_ID,
@@ -175,24 +180,25 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             });
         }
 
-        // في المرحلة الأولى:
-        // نستقبل الطلب فقط ونتأكد أن AppSheet متصل بالـ Backend.
-        // لن ننفذ أي تعديل على البيانات حتى نكمل طبقة الأمان والموافقات.
-console.log('بدء تحليل طلب AppSheet بواسطة AI...');
+        // تحليل الطلب فقط بواسطة الذكاء الاصطناعي
+        // لا يتم تنفيذ أي تعديل على البيانات في هذه المرحلة
+        console.log('بدء تحليل طلب AppSheet بواسطة AI...');
 
-const aiResult = await analyzeAppSheetAction(action);
+        const aiResult = await analyzeAppSheetAction(action);
 
-console.log('AI Analysis Result:', aiResult);
+        console.log('AI Analysis Result:', aiResult);
 
-return res.status(200).json({
-    success: true,
-    message: 'AI action analyzed successfully',
-    AI_Action_ID: action.AI_Action_ID,
-    status: 'analyzed',
-    analysis: aiResult
-});
+        // إرجاع نتيجة التحليل إلى AppSheet
+        return res.status(200).json({
+            success: true,
+            message: 'AI action analyzed successfully',
+            AI_Action_ID: action.AI_Action_ID,
+            status: 'analyzed',
+            analysis: aiResult
+        });
 
     } catch (error) {
+
         console.error('AppSheet AI Action error:', error);
 
         return res.status(500).json({
@@ -201,8 +207,6 @@ return res.status(200).json({
         });
     }
 });
-
-
 
 
 

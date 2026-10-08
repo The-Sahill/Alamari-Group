@@ -182,8 +182,10 @@ Status
 // التحقق من بنية نتيجة الذكاء الاصطناعي
 // ======================================================
 
+
 function validateAIAnalysis(aiResult) {
 
+    // يجب أن تكون النتيجة Object
     if (
         !aiResult ||
         typeof aiResult !== 'object' ||
@@ -192,11 +194,14 @@ function validateAIAnalysis(aiResult) {
         throw new Error('AI analysis is not a valid object');
     }
 
+    // الحقول الإلزامية
     const requiredFields = [
         'intent',
+        'operation',
         'requested_action',
         'target_table',
         'target_record_id',
+        'changes',
         'risk_level',
         'confirmation_required',
         'summary'
@@ -210,6 +215,45 @@ function validateAIAnalysis(aiResult) {
         }
     }
 
+
+    // ==================================================
+    // التحقق من operation
+    // ==================================================
+
+    const allowedOperations = [
+        'read',
+        'create',
+        'update',
+        'delete',
+        'unknown'
+    ];
+
+    if (!allowedOperations.includes(aiResult.operation)) {
+        throw new Error(
+            `Invalid AI operation: ${aiResult.operation}`
+        );
+    }
+
+
+    // ==================================================
+    // التحقق من changes
+    // ==================================================
+
+    if (
+        !aiResult.changes ||
+        typeof aiResult.changes !== 'object' ||
+        Array.isArray(aiResult.changes)
+    ) {
+        throw new Error(
+            'AI changes must be an object'
+        );
+    }
+
+
+    // ==================================================
+    // التحقق من risk_level
+    // ==================================================
+
     const allowedRiskLevels = [
         'low',
         'medium',
@@ -222,11 +266,21 @@ function validateAIAnalysis(aiResult) {
         );
     }
 
+
+    // ==================================================
+    // confirmation_required يجب أن تكون Boolean
+    // ==================================================
+
     if (typeof aiResult.confirmation_required !== 'boolean') {
         throw new Error(
             'confirmation_required must be boolean'
         );
     }
+
+
+    // ==================================================
+    // التحقق من الحقول النصية
+    // ==================================================
 
     const stringFields = [
         'intent',
@@ -244,9 +298,46 @@ function validateAIAnalysis(aiResult) {
         }
     }
 
+
+    // ==================================================
+    // قواعد مرتبطة بنوع العملية
+    // ==================================================
+
+    // update يجب أن يحتوي على changes
+    if (
+        aiResult.operation === 'update' &&
+        Object.keys(aiResult.changes).length === 0
+    ) {
+        throw new Error(
+            'Update operation requires at least one change'
+        );
+    }
+
+
+    // read لا يجب أن يطلب تعديلات
+    if (
+        aiResult.operation === 'read' &&
+        Object.keys(aiResult.changes).length > 0
+    ) {
+        throw new Error(
+            'Read operation cannot contain changes'
+        );
+    }
+
+
+    // delete لا يجب أن يحتوي على changes
+    if (
+        aiResult.operation === 'delete' &&
+        Object.keys(aiResult.changes).length > 0
+    ) {
+        throw new Error(
+            'Delete operation cannot contain changes'
+        );
+    }
+
+
     return true;
 }
-
 
 // ======================================================
 // Security Policy

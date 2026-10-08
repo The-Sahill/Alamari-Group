@@ -351,6 +351,31 @@ const AI_SECURITY_POLICY = {
         // مفتاح الجدول
         keyField: 'Deal_ID',
 
+        // الحقول التي يسمح لمحرك AI باقتراح تعديلها
+allowedWritableFields: [
+    'Person_ID',
+    'Requirement_ID',
+    'Transaction_Type',
+    'Property_ID',
+    'Unit_ID',
+    'Assigned_Employee_ID',
+    'Pipeline',
+    'Stage',
+    'Expected_Value',
+    'Currency',
+    'Expected_Commission',
+    'Final_Commission',
+    'Final_Value',
+    'Probability',
+    'Lead_Source',
+    'Last_Contact_At',
+    'Next_Action',
+    'Next_Action_Date',
+    'Lost_Reason',
+    'Closed_Date',
+    'Status'
+],
+
         // حقول لا يسمح للذكاء الاصطناعي بتعديلها مباشرة
         protectedFields: [
             '_RowNumber',
@@ -553,18 +578,31 @@ function evaluateAISecurity(action, aiResult) {
         // فحص كل حقل يريد AI تعديله
         // ----------------------------------------------
 
-        for (const [field, value] of changeEntries) {
+      for (const [field, value] of changeEntries) {
 
-            // منع الحقول المحمية
-            if (tablePolicy.protectedFields.includes(field)) {
+    // أي حقل غير موجود في القائمة البيضاء مرفوض
+    if (!tablePolicy.allowedWritableFields.includes(field)) {
 
-                securityResult.rejected_fields.push({
-                    field: field,
-                    reason: 'Protected field'
-                });
+        securityResult.rejected_fields.push({
+            field: field,
+            reason: 'Field is not in allowed writable fields'
+        });
 
-                continue;
-            }
+        continue;
+    }
+
+    // حماية إضافية للحقول المحمية
+    if (tablePolicy.protectedFields.includes(field)) {
+
+        securityResult.rejected_fields.push({
+            field: field,
+            reason: 'Protected field'
+        });
+
+        continue;
+    }
+
+    // بقية فحص Stage و Status يبقى كما هو
 
 
             // ------------------------------------------

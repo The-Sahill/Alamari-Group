@@ -75,6 +75,70 @@ app.get('/webhook', (req, res) => {
 // AppSheet AI Actions Endpoint
 // =====================================================
 
+
+
+
+
+
+async function analyzeAppSheetAction(action) {
+    const prompt = `
+أنت محرك ذكاء اصطناعي لنظام إدارة Alamari Group.
+
+حلل الطلب القادم من AppSheet.
+
+بيانات الطلب:
+نوع المستخدم: ${action.User_Type || ''}
+رقم الموظف: ${action.Employee_ID || ''}
+رقم الشخص: ${action.Person_ID || ''}
+رقم واتساب: ${action.WhatsApp_Number || ''}
+القناة: ${action.Channel || ''}
+نوع الإدخال: ${action.Input_Type || ''}
+النص الأصلي: ${action.Original_Input || ''}
+النص المحول: ${action.Transcription || ''}
+الإجراء المطلوب: ${action.Requested_Action || ''}
+الجدول المستهدف: ${action.Target_Table || ''}
+السجل المستهدف: ${action.Target_Record_ID || ''}
+مستوى الخطورة: ${action.Risk_Level || ''}
+هل يحتاج تأكيد: ${action.Confirmation_Required || ''}
+حالة التأكيد: ${action.Confirmation_Status || ''}
+
+مهمتك الآن هي فهم الطلب وتحليله فقط.
+لا تنفذ أي تعديل على البيانات.
+
+أرجع النتيجة بصيغة JSON فقط بالشكل التالي:
+{
+  "intent": "",
+  "requested_action": "",
+  "target_table": "",
+  "target_record_id": "",
+  "risk_level": "low",
+  "confirmation_required": false,
+  "summary": ""
+}
+`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents: prompt,
+    });
+
+    return response.text;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 app.post('/api/appsheet/ai-action', async (req, res) => {
     try {
 
@@ -90,11 +154,7 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             error: 'Unauthorized'
         });
     }
-
-
-
-
-        const action = req.body;
+  const action = req.body;
 
         console.log('AppSheet AI Action received:', {
             AI_Action_ID: action.AI_Action_ID,
@@ -118,13 +178,19 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
         // في المرحلة الأولى:
         // نستقبل الطلب فقط ونتأكد أن AppSheet متصل بالـ Backend.
         // لن ننفذ أي تعديل على البيانات حتى نكمل طبقة الأمان والموافقات.
-console.log('تم استلام طلب AppSheet AI Action بنجاح. لم يتم تنفيذ أي تعديل على البيانات بعد.');
-        return res.status(200).json({
-            success: true,
-            message: 'AI action received successfully',
-            AI_Action_ID: action.AI_Action_ID,
-            status: 'received'
-        });
+console.log('بدء تحليل طلب AppSheet بواسطة AI...');
+
+const aiResult = await analyzeAppSheetAction(action);
+
+console.log('AI Analysis Result:', aiResult);
+
+return res.status(200).json({
+    success: true,
+    message: 'AI action analyzed successfully',
+    AI_Action_ID: action.AI_Action_ID,
+    status: 'analyzed',
+    analysis: aiResult
+});
 
     } catch (error) {
         console.error('AppSheet AI Action error:', error);

@@ -423,25 +423,28 @@ function evaluateAISecurity(action, aiResult) {
         ''
     ).trim().toUpperCase();
 
-    const requestedAction = String(
-        aiResult.requested_action ||
-        action.Requested_Action ||
-        ''
+    const operation = String(
+        aiResult.operation || 'unknown'
     ).trim().toLowerCase();
+
+    const changes = aiResult.changes || {};
 
     const securityResult = {
         allowed: false,
         target_table: targetTable,
+        operation: operation,
         server_risk_level: 'high',
         confirmation_required: true,
         execution_allowed_now: false,
+        validated_changes: {},
+        rejected_fields: [],
         reason: ''
     };
 
 
-    // ------------------------------------------
-    // 1. يجب تحديد الجدول
-    // ------------------------------------------
+    // ==================================================
+    // 1. التأكد من وجود الجدول
+    // ==================================================
 
     if (!targetTable) {
         securityResult.reason = 'Target table is missing';
@@ -449,9 +452,9 @@ function evaluateAISecurity(action, aiResult) {
     }
 
 
-    // ------------------------------------------
-    // 2. رفض أي جدول غير موجود في Security Policy
-    // ------------------------------------------
+    // ==================================================
+    // 2. التأكد أن الجدول مسموح
+    // ==================================================
 
     const tablePolicy = AI_SECURITY_POLICY[targetTable];
 
@@ -463,105 +466,262 @@ function evaluateAISecurity(action, aiResult) {
     }
 
 
-    // ------------------------------------------
-    // 3. منع الحذف
-    // ------------------------------------------
+    // ==================================================
+    // 3. منع الحذف بالكامل حاليًا
+    // ==================================================
 
-    const deleteKeywords = [
-        'delete',
-        'remove',
-        'erase',
-        'حذف',
-        'احذف',
-        'إزالة'
-    ];
-
-    const isDeleteRequest = deleteKeywords.some(
-        keyword => requestedAction.includes(keyword)
-    );
-
-    if (isDeleteRequest) {
+    if (operation === 'delete') {
         securityResult.allowed = false;
         securityResult.server_risk_level = 'high';
         securityResult.confirmation_required = true;
-        securityResult.execution_allowed_now = false;
         securityResult.reason =
-            'AI deletion is blocked by server security policy';
+            'Delete operations are blocked by server policy';
 
         return securityResult;
     }
 
 
-    // ------------------------------------------
-    // 4. القراءة والبحث
-    // ------------------------------------------
+    // ==================================================
+    // 4. الطلب غير الواضح
+    // ==================================================
 
-    const readKeywords = [
-        'read',
-        'get',
-        'find',
-        'search',
-        'list',
-        'view',
-        'query',
-        'lookup',
-        'عرض',
-        'بحث',
-        'ابحث',
-        'قراءة',
-        'اقرأ',
-        'استعلام'
-    ];
+    if (operation === 'unknown') {
+        securityResult.allowed = false;
+        securityResult.server_risk_level = 'medium';
+        securityResult.confirmation_required = true;
+        securityResult.reason =
+            'Operation is unknown or unclear';
 
-    const isReadRequest = readKeywords.some(
-        keyword => requestedAction.includes(keyword)
-    );
+        return securityResult;
+    }
 
-    if (isReadRequest) {
+
+    // ==================================================
+    // 5. القراءة
+    // ==================================================
+
+    if (operation === 'read') {
         securityResult.allowed = true;
         securityResult.server_risk_level = 'low';
         securityResult.confirmation_required = false;
 
-        // ما زلنا لا ننفذ في هذه المرحلة
+        // التنفيذ ما زال مغلقًا في هذه المرحلة
         securityResult.execution_allowed_now = false;
 
         securityResult.reason =
-            'Read-only request allowed by server policy';
+            'Read operation passed server security policy';
 
         return securityResult;
     }
 
 
-    // ------------------------------------------
-    // 5. طلب غير واضح
-    // ------------------------------------------
+    // ==================================================
+    // 6. CREATE
+    // ==================================================
 
-    if (
-        !requestedAction ||
-        requestedAction === 'none' ||
-        requestedAction === 'unknown'
-    ) {
-        securityResult.allowed = false;
+    if (operation === 'create') {
+
+        securityResult.allowed = true;
         securityResult.server_risk_level = 'medium';
         securityResult.confirmation_required = true;
         securityResult.execution_allowed_now = false;
         securityResult.reason =
-            'Requested action is missing or unclear';
+            'Create operation requires confirmation';
 
         return securityResult;
     }
 
 
-    // ------------------------------------------
-    // 6. أي تعديل حاليًا يحتاج تأكيد
-    // ------------------------------------------
+    // ==================================================
+    // 7. UPDATE
+    // ==================================================
 
-    securityResult.allowed = true;
-    securityResult.server_risk_level = 'medium';
+    if (operation === 'update') {
+
+        const changeEntries = Object.entries(changes);
+
+        if (changeEntries.length === 0) {
+            securityResult.allowed = false;
+            securityResult.reason =
+                'Update operation contains no changes';
+
+            return securityResult;
+        }
+
+
+        // ----------------------------------------------
+        // فحص كل حقل يريد AI تعديله
+        // ----------------------------------------------
+
+        for (const [field, value] of changeEntries) {
+
+            // منع الحقول المحمية
+            if (tablePolicy.protectedFields.includes(field)) {
+
+                securityResult.rejected_fields.push({
+                    field: field,
+                    reason: 'Protected field'
+                });
+
+                continue;
+            }
+
+
+            // ------------------------------------------
+            // التحقق من Stage
+            // ------------------------------------------
+
+            if (field === 'Stage') {
+
+                if (!tablePolicy.allowedStages.includes(value)) {
+
+                    securityResult.rejected_fields.push({
+                        field: field,
+                        value: value,
+                        reason: 'Invalid Stage value'
+                    });
+
+                    continue;
+                }
+            }
+
+
+            // ------------------------------------------
+            // التحقق من Status
+            // ------------------------------------------
+
+            if (field === 'Status') {
+
+                if (!tablePolicy.allowedStatuses.includes(value)) {
+
+                    securityResult.rejected_fields.push({
+                        field: field,
+                        value: value,
+                        reason: 'Invalid Status value'
+                    });
+
+                    continue;
+                }
+            }
+
+
+            // إذا اجتاز الحقل الفحص
+            securityResult.validated_changes[field] = value;
+        }
+
+
+        // ==================================================
+        // 8. إذا وجد أي حقل مرفوض نرفض العملية كلها
+        // ==================================================
+
+        if (securityResult.rejected_fields.length > 0) {
+
+            securityResult.allowed = false;
+            securityResult.server_risk_level = 'high';
+            securityResult.confirmation_required = true;
+            securityResult.execution_allowed_now = false;
+            securityResult.reason =
+                'One or more requested fields were rejected by server policy';
+
+            return securityResult;
+        }
+
+
+        // ==================================================
+        // 9. فحص الحقول المالية
+        // ==================================================
+
+        const changedFields =
+            Object.keys(securityResult.validated_changes);
+
+        const containsFinancialField =
+            changedFields.some(
+                field =>
+                    tablePolicy.financialFields.includes(field)
+            );
+
+
+        if (containsFinancialField) {
+
+            securityResult.allowed = true;
+            securityResult.server_risk_level = 'high';
+            securityResult.confirmation_required = true;
+            securityResult.execution_allowed_now = false;
+            securityResult.reason =
+                'Financial changes require explicit confirmation';
+
+            return securityResult;
+        }
+
+
+        // ==================================================
+        // 10. فحص الحالات النهائية
+        // ==================================================
+
+        const requestedStatus =
+            securityResult.validated_changes.Status;
+
+        const requestedStage =
+            securityResult.validated_changes.Stage;
+
+
+        if (
+            requestedStatus &&
+            tablePolicy.sensitiveStatuses.includes(requestedStatus)
+        ) {
+
+            securityResult.allowed = true;
+            securityResult.server_risk_level = 'high';
+            securityResult.confirmation_required = true;
+            securityResult.execution_allowed_now = false;
+            securityResult.reason =
+                'Sensitive deal status requires explicit confirmation';
+
+            return securityResult;
+        }
+
+
+        if (
+            requestedStage === 'مغلقة - ناجحة' ||
+            requestedStage === 'مغلقة - خاسرة'
+        ) {
+
+            securityResult.allowed = true;
+            securityResult.server_risk_level = 'high';
+            securityResult.confirmation_required = true;
+            securityResult.execution_allowed_now = false;
+            securityResult.reason =
+                'Closing a deal requires explicit confirmation';
+
+            return securityResult;
+        }
+
+
+        // ==================================================
+        // 11. تعديل عادي
+        // ==================================================
+
+        securityResult.allowed = true;
+        securityResult.server_risk_level = 'medium';
+        securityResult.confirmation_required = true;
+        securityResult.execution_allowed_now = false;
+        securityResult.reason =
+            'Update passed field validation but requires confirmation';
+
+        return securityResult;
+    }
+
+
+    // ==================================================
+    // أي عملية لم نتوقعها
+    // ==================================================
+
+    securityResult.allowed = false;
+    securityResult.server_risk_level = 'high';
     securityResult.confirmation_required = true;
     securityResult.execution_allowed_now = false;
     securityResult.reason =
-        'Write operation requires confirmation and further validation';
+        'Operation is not supported by server policy';
 
     return securityResult;
 }

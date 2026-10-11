@@ -766,6 +766,155 @@ function evaluateAISecurity(action, aiResult) {
 
 
 
+
+// ======================================================
+// Confirmation Gate
+// التحقق من حالة التأكيد قبل السماح بأي تنفيذ
+// ======================================================
+
+function evaluateConfirmation(action, securityResult) {
+
+    const confirmationStatus = String(
+        action.Confirmation_Status || ''
+    ).trim();
+
+    const result = {
+        confirmation_required: securityResult.confirmation_required,
+        confirmation_status: confirmationStatus,
+        confirmed: false,
+        execution_allowed: false,
+        reason: ''
+    };
+
+
+    // ==================================================
+    // 1. إذا كانت Security Policy رفضت العملية
+    // التأكيد لا يستطيع تجاوز قرار الأمان
+    // ==================================================
+
+    if (!securityResult.allowed) {
+        result.confirmed = false;
+        result.execution_allowed = false;
+        result.reason =
+            'Operation rejected by server security policy';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 2. إذا العملية لا تحتاج تأكيد
+    // ==================================================
+
+    if (!securityResult.confirmation_required) {
+
+        result.confirmed = true;
+
+        // سنبقي التنفيذ الفعلي مغلقًا مؤقتًا
+        result.execution_allowed = false;
+
+        result.reason =
+            'Confirmation is not required';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 3. بانتظار التأكيد
+    // ==================================================
+
+    if (confirmationStatus === 'بانتظار التأكيد') {
+
+        result.confirmed = false;
+        result.execution_allowed = false;
+        result.reason =
+            'Waiting for confirmation';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 4. تم التأكيد
+    // ==================================================
+
+    if (confirmationStatus === 'تم التأكيد') {
+
+        result.confirmed = true;
+
+        // مهم:
+        // لا نفتح التنفيذ الحقيقي حتى الآن
+        result.execution_allowed = false;
+
+        result.reason =
+            'Confirmation received - execution still disabled';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 5. تم الرفض
+    // ==================================================
+
+    if (confirmationStatus === 'تم الرفض') {
+
+        result.confirmed = false;
+        result.execution_allowed = false;
+        result.reason =
+            'Operation was rejected';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 6. انتهت المهلة
+    // ==================================================
+
+    if (confirmationStatus === 'انتهت المهلة') {
+
+        result.confirmed = false;
+        result.execution_allowed = false;
+        result.reason =
+            'Confirmation expired';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 7. غير مطلوب
+    // لكن Security Policy تقول إن التأكيد مطلوب
+    // إذًا نرفض التنفيذ
+    // ==================================================
+
+    if (confirmationStatus === 'غير مطلوب') {
+
+        result.confirmed = false;
+        result.execution_allowed = false;
+        result.reason =
+            'Server requires confirmation but status is not required';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 8. حالة فارغة أو غير معروفة
+    // ==================================================
+
+    result.confirmed = false;
+    result.execution_allowed = false;
+    result.reason =
+        'Confirmation status is missing or invalid';
+
+    return result;
+}
+
+
+
 // ======================================================
 // AppSheet AI Action Endpoint
 // ======================================================
@@ -887,6 +1036,18 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             securityResult
         );
 
+        // ------------------------------------------
+// فحص بوابة التأكيد
+// ------------------------------------------
+
+const confirmationResult =
+    evaluateConfirmation(action, securityResult);
+
+console.log(
+    'Confirmation Decision:',
+    confirmationResult
+);
+
 
         // ------------------------------------------
         // لا يوجد تنفيذ فعلي حتى الآن
@@ -914,12 +1075,16 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             status:
                 'security_checked',
 
-            analysis:
-                aiResult,
+         analysis: aiResult,
 
-            security:
-                securityResult
+security:
+    securityResult,
+
+confirmation:
+    confirmationResult
         });
+
+
 
 
     } catch (error) {

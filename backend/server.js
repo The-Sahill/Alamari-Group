@@ -774,9 +774,14 @@ function evaluateAISecurity(action, aiResult) {
 
 function evaluateConfirmation(action, securityResult) {
 
-    const confirmationStatus = String(
-        action.Confirmation_Status || ''
-    ).trim();
+const rawConfirmationStatus = String(
+    action.Confirmation_Status || ''
+).trim();
+
+const confirmationStatus = rawConfirmationStatus
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/\s+/g, ' ')
+    .trim();
 
     const result = {
         confirmation_required: securityResult.confirmation_required,
@@ -824,7 +829,7 @@ function evaluateConfirmation(action, securityResult) {
     // 3. بانتظار التأكيد
     // ==================================================
 
-    if (confirmationStatus === 'بانتظار التأكيد') {
+    if (confirmationStatus === 'بانتظار التاكيد') {
 
         result.confirmed = false;
         result.execution_allowed = false;
@@ -839,7 +844,7 @@ function evaluateConfirmation(action, securityResult) {
     // 4. تم التأكيد
     // ==================================================
 
-    if (confirmationStatus === 'تم التأكيد') {
+    if (confirmationStatus === 'تم التاكيد') {
 
         result.confirmed = true;
 

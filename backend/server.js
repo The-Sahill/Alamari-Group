@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const { GoogleGenAI } = require('@google/genai');
 const { getPrompt } = require('./controllers/prompt');
+const { google } = require('googleapis');
 
 const app = express();
 app.use(bodyParser.json());
@@ -11,6 +12,51 @@ app.use(bodyParser.json());
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
+
+
+// ======================================================
+// Google Sheets Connection
+// ======================================================
+
+const googleSheetsAuth = new google.auth.JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+
+    key: process.env.GOOGLE_PRIVATE_KEY
+        ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        : undefined,
+
+    scopes: [
+        'https://www.googleapis.com/auth/spreadsheets'
+    ]
+});
+
+const sheets = google.sheets({
+    version: 'v4',
+    auth: googleSheetsAuth
+});
+
+const SPREADSHEET_ID =
+    process.env.GOOGLE_SPREADSHEET_ID;
+
+
+// ======================================================
+// التحقق من إعدادات Google Sheets
+// ======================================================
+
+if (
+    !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+    !process.env.GOOGLE_PRIVATE_KEY ||
+    !SPREADSHEET_ID
+) {
+    console.warn(
+        'Google Sheets environment variables are incomplete'
+    );
+} else {
+    console.log(
+        'Google Sheets configuration loaded'
+    );
+}
+
 
 // دالة لإرسال رسالة نصية عبر واتساب مباشرة
 async function sendWhatsAppMessage(recipientID, text) {
@@ -512,7 +558,6 @@ function evaluateAISecurity(action, aiResult) {
 
     if (operation === 'unknown') {
         securityResult.allowed = false;
-        securityResult.server_risk_level = 'medium';
         securityResult.confirmation_required = true;
         securityResult.reason =
             'Operation is unknown or unclear';

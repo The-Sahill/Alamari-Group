@@ -2131,6 +2131,70 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
+
+
+
+app.get('/api/debug/table-headers', async (req, res) => {
+
+    try {
+
+        const result = {};
+
+        for (
+            const tableName
+            of Object.keys(TABLE_CONFIG)
+        ) {
+
+            try {
+
+                const headers =
+                    await getTableHeaders(
+                        tableName
+                    );
+
+                result[tableName] = {
+                    sheetName:
+                        TABLE_CONFIG[tableName]
+                            .sheetName,
+
+                    keyColumn:
+                        TABLE_CONFIG[tableName]
+                            .keyColumn,
+
+                    headers:
+                        headers
+                };
+
+            } catch (error) {
+
+                result[tableName] = {
+                    error:
+                        error.message
+                };
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            tables: result
+        });
+
+    } catch (error) {
+
+        console.error(
+            'Table headers debug error:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            error:
+                error.message
+        });
+    }
+});
+
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

@@ -684,6 +684,39 @@ async function updateAIActionExecution(
 // =====================================================
 
 async function analyzeAppSheetAction(action) {
+
+    // ==================================================
+    // تحميل أسماء الحقول الحقيقية للجدول المستهدف
+    // ==================================================
+
+    let targetTableHeaders = [];
+
+    try {
+
+        const requestedTable =
+            String(
+                action.Target_Table || ''
+            )
+            .trim()
+            .toUpperCase();
+
+        if (requestedTable) {
+
+            targetTableHeaders =
+                await getTableHeaders(
+                    requestedTable
+                );
+        }
+
+    } catch (error) {
+
+        console.error(
+            'Could not load target table headers for AI:',
+            error.message
+        );
+    }
+
+
     const prompt = `
 أنت محرك فهم طلبات لنظام إدارة Alamari Group.
 
@@ -705,7 +738,7 @@ async function analyzeAppSheetAction(action) {
 الإجراء المطلوب: ${action.Requested_Action || ''}
 الجدول المستهدف: ${action.Target_Table || ''}
 الحقول التقنية الحقيقية الموجودة في الجدول:
-${action.targetTableHeaders.join(', ')}
+${targetTableHeaders.join(', ')}
 
 مهم جدًا:
 عند إنشاء changes يجب استخدام أسماء الحقول التقنية الموجودة في القائمة أعلاه حرفيًا.
@@ -1047,7 +1080,7 @@ const AI_SECURITY_POLICY = {
             'مغلقة - خاسرة',
             'مؤرشفة'
         ]
-   },
+    },
 
     PROPERTIES: {
         keyField: 'Property_ID',
@@ -1074,10 +1107,10 @@ const AI_SECURITY_POLICY = {
             'Updated_At'
         ],
         // PROPERTIES
-financialFields: [
-    'Service_Fee_Fixed',
-    'Service_Fee_Rate'
-],
+        financialFields: [
+            'Service_Fee_Fixed',
+            'Service_Fee_Rate'
+        ],
         sensitiveStatuses: [],
         allowedStages: [],
         allowedStatuses: []
@@ -1092,18 +1125,18 @@ financialFields: [
             'Created_At',
             'Updated_At'
         ],
-      // UNITS
-financialFields: [
-    'Monthly_Service_Fee',
-    'sale_price_per_sqm',
-    'Sale_Price',
-    'Daily_Rent',
-    'Rental_Price_Monthly',
-    'Three_Month_Rent',
-    'Six_Month_Ren',
-    'Annual_Rent',
-    'Currency'
-],
+        // UNITS
+        financialFields: [
+            'Monthly_Service_Fee',
+            'sale_price_per_sqm',
+            'Sale_Price',
+            'Daily_Rent',
+            'Rental_Price_Monthly',
+            'Three_Month_Rent',
+            'Six_Month_Ren',
+            'Annual_Rent',
+            'Currency'
+        ],
         sensitiveStatuses: [],
         allowedStages: [],
         allowedStatuses: []
@@ -1148,12 +1181,12 @@ financialFields: [
             'Created_At',
             'Updated_At'
         ],
-      // REQUIREMENTS
-financialFields: [
-    'Min_Budget',
-    'Max_Budget',
-    'Currency'
-],
+        // REQUIREMENTS
+        financialFields: [
+            'Min_Budget',
+            'Max_Budget',
+            'Currency'
+        ],
         sensitiveStatuses: [],
         allowedStages: [],
         allowedStatuses: []
@@ -1183,12 +1216,12 @@ financialFields: [
             'Created_At',
             'Updated_At'
         ],
-       // MAINTENANCE
-financialFields: [
-    'Estimated_Cost',
-    'Actual_Cost',
-    'Currency'
-],
+        // MAINTENANCE
+        financialFields: [
+            'Estimated_Cost',
+            'Actual_Cost',
+            'Currency'
+        ],
         sensitiveStatuses: [],
         allowedStages: [],
         allowedStatuses: []
@@ -1338,113 +1371,113 @@ async function evaluateAISecurity(action, aiResult) {
         // فحص كل حقل يريد AI تعديله
         // ----------------------------------------------
 
-     for (const [field, value] of changeEntries) {
+        for (const [field, value] of changeEntries) {
 
-    // ------------------------------------------
-    // 1. التأكد أن الحقل موجود فعليًا في الجدول
-    //    وأنه ليس الـ Key
-    // ------------------------------------------
+            // ------------------------------------------
+            // 1. التأكد أن الحقل موجود فعليًا في الجدول
+            //    وأنه ليس الـ Key
+            // ------------------------------------------
 
-    const tableFieldCheck =
-        await validateTableField(
-            targetTable,
-            field
-        );
+            const tableFieldCheck =
+                await validateTableField(
+                    targetTable,
+                    field
+                );
 
-    if (!tableFieldCheck.allowed) {
+            if (!tableFieldCheck.allowed) {
 
-        securityResult.rejected_fields.push({
-            field: field,
-            reason: tableFieldCheck.reason
-        });
+                securityResult.rejected_fields.push({
+                    field: field,
+                    reason: tableFieldCheck.reason
+                });
 
-        continue;
-    }
-
-
-    // ------------------------------------------
-    // 2. القائمة البيضاء الأمنية
-    // ------------------------------------------
-
-// ------------------------------------------
-// القائمة البيضاء
-// DEALS يبقى بسياسة صارمة كما اختبرناه.
-// بقية الجداول تعتمد على:
-// 1) وجود الحقل فعليًا في Sheet
-// 2) ألا يكون Key
-// 3) ألا يكون Protected
-// ------------------------------------------
-
-const usesStrictWhitelist =
-    tablePolicy.allowedWritableFields.length > 0;
-
-if (
-    usesStrictWhitelist &&
-    !tablePolicy.allowedWritableFields.includes(field)
-) {
-
-    securityResult.rejected_fields.push({
-        field: field,
-        reason:
-            'Field is not in allowed writable fields'
-    });
-
-    continue;
-}
+                continue;
+            }
 
 
-    // ------------------------------------------
-    // 3. الحقول المحمية
-    // ------------------------------------------
+            // ------------------------------------------
+            // 2. القائمة البيضاء الأمنية
+            // ------------------------------------------
 
-    if (
-        tablePolicy.protectedFields.includes(field)
-    ) {
+            // ------------------------------------------
+            // القائمة البيضاء
+            // DEALS يبقى بسياسة صارمة كما اختبرناه.
+            // بقية الجداول تعتمد على:
+            // 1) وجود الحقل فعليًا في Sheet
+            // 2) ألا يكون Key
+            // 3) ألا يكون Protected
+            // ------------------------------------------
 
-        securityResult.rejected_fields.push({
-            field: field,
-            reason: 'Protected field'
-        });
+            const usesStrictWhitelist =
+                tablePolicy.allowedWritableFields.length > 0;
 
-        continue;
-    }
+            if (
+                usesStrictWhitelist &&
+                !tablePolicy.allowedWritableFields.includes(field)
+            ) {
+
+                securityResult.rejected_fields.push({
+                    field: field,
+                    reason:
+                        'Field is not in allowed writable fields'
+                });
+
+                continue;
+            }
 
 
+            // ------------------------------------------
+            // 3. الحقول المحمية
+            // ------------------------------------------
 
+            if (
+                tablePolicy.protectedFields.includes(field)
+            ) {
 
+                securityResult.rejected_fields.push({
+                    field: field,
+                    reason: 'Protected field'
+                });
 
-
-// ------------------------------------------
-// حماية عامة للحقول النظامية
-// ------------------------------------------
-
-const systemProtectedFields = [
-    'Created_At',
-    'Created_By',
-    'Updated_At',
-    'Updated_By',
-    'Delete_Confirmation'
-];
-
-if (systemProtectedFields.includes(field)) {
-
-    securityResult.rejected_fields.push({
-        field: field,
-        reason:
-            'System-managed field cannot be modified by AI'
-    });
-
-    continue;
-}
+                continue;
+            }
 
 
 
 
 
 
+            // ------------------------------------------
+            // حماية عامة للحقول النظامية
+            // ------------------------------------------
+
+            const systemProtectedFields = [
+                'Created_At',
+                'Created_By',
+                'Updated_At',
+                'Updated_By',
+                'Delete_Confirmation'
+            ];
+
+            if (systemProtectedFields.includes(field)) {
+
+                securityResult.rejected_fields.push({
+                    field: field,
+                    reason:
+                        'System-managed field cannot be modified by AI'
+                });
+
+                continue;
+            }
 
 
-    // بقية فحص Stage و Status يبقى كما هو
+
+
+
+
+
+
+            // بقية فحص Stage و Status يبقى كما هو
 
             // بقية فحص Stage و Status يبقى كما هو
 
@@ -1453,44 +1486,44 @@ if (systemProtectedFields.includes(field)) {
             // التحقق من Stage
             // ------------------------------------------
 
-   if (
-    field === 'Stage' &&
-    tablePolicy.allowedStages.length > 0
-) {
+            if (
+                field === 'Stage' &&
+                tablePolicy.allowedStages.length > 0
+            ) {
 
-    if (!tablePolicy.allowedStages.includes(value)) {
+                if (!tablePolicy.allowedStages.includes(value)) {
 
-        securityResult.rejected_fields.push({
-            field: field,
-            value: value,
-            reason: 'Invalid Stage value'
-        });
+                    securityResult.rejected_fields.push({
+                        field: field,
+                        value: value,
+                        reason: 'Invalid Stage value'
+                    });
 
-        continue;
-    }
-}
+                    continue;
+                }
+            }
 
 
             // ------------------------------------------
             // التحقق من Status
             // ------------------------------------------
 
-         if (
-    field === 'Status' &&
-    tablePolicy.allowedStatuses.length > 0
-) {
+            if (
+                field === 'Status' &&
+                tablePolicy.allowedStatuses.length > 0
+            ) {
 
-    if (!tablePolicy.allowedStatuses.includes(value)) {
+                if (!tablePolicy.allowedStatuses.includes(value)) {
 
-        securityResult.rejected_fields.push({
-            field: field,
-            value: value,
-            reason: 'Invalid Status value'
-        });
+                    securityResult.rejected_fields.push({
+                        field: field,
+                        value: value,
+                        reason: 'Invalid Status value'
+                    });
 
-        continue;
-    }
-}
+                    continue;
+                }
+            }
 
 
             // إذا اجتاز الحقل الفحص
@@ -1916,11 +1949,11 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
         // تطبيق Security Policy الخاصة بالسيرفر
         // ------------------------------------------
 
-       const securityResult =
-    await evaluateAISecurity(
-        action,
-        aiResult
-    );
+        const securityResult =
+            await evaluateAISecurity(
+                action,
+                aiResult
+            );
 
         console.log(
             'Server Security Decision:',
@@ -2009,78 +2042,78 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             );
 
 
-      } else {
+        } else {
 
-    // ------------------------------------------
-    // رفض أمني حقيقي
-    // ------------------------------------------
+            // ------------------------------------------
+            // رفض أمني حقيقي
+            // ------------------------------------------
 
-    if (securityResult.allowed === false) {
+            if (securityResult.allowed === false) {
 
-        console.log(
-            'Execution rejected by Security Policy:',
-            securityResult.reason
-        );
+                console.log(
+                    'Execution rejected by Security Policy:',
+                    securityResult.reason
+                );
 
-        await updateAIActionExecution(
-            action.AI_Action_ID,
-            'ملغي',
-            JSON.stringify({
-                reason:
-                    securityResult.reason,
+                await updateAIActionExecution(
+                    action.AI_Action_ID,
+                    'ملغي',
+                    JSON.stringify({
+                        reason:
+                            securityResult.reason,
 
-                rejectedFields:
-                    securityResult.rejected_fields || []
-            }),
-            ''
-        );
+                        rejectedFields:
+                            securityResult.rejected_fields || []
+                    }),
+                    ''
+                );
 
-        console.log(
-            'AI Action marked as cancelled:',
-            action.AI_Action_ID
-        );
+                console.log(
+                    'AI Action marked as cancelled:',
+                    action.AI_Action_ID
+                );
 
-    }
-
-    // ------------------------------------------
-    // العملية مسموحة لكن تنتظر التأكيد
-    // ------------------------------------------
-
-    else if (
-        securityResult.confirmation_required === true &&
-        confirmationResult.confirmed !== true
-    ) {
-
-        console.log(
-            'Execution waiting for confirmation:',
-            action.AI_Action_ID
-        );
-
-        // لا نكتب "ملغي" ولا "فشل"
-        // ولا ننفذ أي تعديل
-    }
-
-    // ------------------------------------------
-    // أي حالة أخرى لم يسمح لها بالتنفيذ
-    // ------------------------------------------
-
-    else {
-
-        console.log(
-            'Execution not authorized:',
-            {
-                securityAllowed:
-                    securityResult.allowed,
-
-                confirmed:
-                    confirmationResult.confirmed,
-
-                executionAllowed:
-                    confirmationResult.execution_allowed
             }
-        );
-    }
-}
+
+            // ------------------------------------------
+            // العملية مسموحة لكن تنتظر التأكيد
+            // ------------------------------------------
+
+            else if (
+                securityResult.confirmation_required === true &&
+                confirmationResult.confirmed !== true
+            ) {
+
+                console.log(
+                    'Execution waiting for confirmation:',
+                    action.AI_Action_ID
+                );
+
+                // لا نكتب "ملغي" ولا "فشل"
+                // ولا ننفذ أي تعديل
+            }
+
+            // ------------------------------------------
+            // أي حالة أخرى لم يسمح لها بالتنفيذ
+            // ------------------------------------------
+
+            else {
+
+                console.log(
+                    'Execution not authorized:',
+                    {
+                        securityAllowed:
+                            securityResult.allowed,
+
+                        confirmed:
+                            confirmationResult.confirmed,
+
+                        executionAllowed:
+                            confirmationResult.execution_allowed
+                    }
+                );
+            }
+        }
 
         // ------------------------------------------
         // إرجاع نتيجة التحليل + قرار السيرفر
@@ -2111,56 +2144,56 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 
 
 
-  } catch (error) {
+    } catch (error) {
 
-    console.error(
-        'AppSheet AI Action error:',
-        error
-    );
+        console.error(
+            'AppSheet AI Action error:',
+            error
+        );
 
-    // ------------------------------------------
-    // تسجيل الخطأ التقني في AI Action
-    // ------------------------------------------
+        // ------------------------------------------
+        // تسجيل الخطأ التقني في AI Action
+        // ------------------------------------------
 
-    try {
+        try {
 
-        const failedActionId =
-            req.body?.AI_Action_ID;
+            const failedActionId =
+                req.body?.AI_Action_ID;
 
-        if (failedActionId) {
+            if (failedActionId) {
 
-            await updateAIActionExecution(
-                failedActionId,
-                'فشل',
-                '',
-                String(
-                    error?.message ||
-                    'Unknown execution error'
-                )
-            );
+                await updateAIActionExecution(
+                    failedActionId,
+                    'فشل',
+                    '',
+                    String(
+                        error?.message ||
+                        'Unknown execution error'
+                    )
+                );
 
-            console.log(
-                'AI Action marked as failed:',
-                failedActionId
+                console.log(
+                    'AI Action marked as failed:',
+                    failedActionId
+                );
+            }
+
+        } catch (trackingError) {
+
+            // إذا تعذر تسجيل حالة الفشل،
+            // نحافظ على الخطأ الأصلي ولا نخفيه
+            console.error(
+                'Failed to record AI Action failure:',
+                trackingError
             );
         }
 
-    } catch (trackingError) {
 
-        // إذا تعذر تسجيل حالة الفشل،
-        // نحافظ على الخطأ الأصلي ولا نخفيه
-        console.error(
-            'Failed to record AI Action failure:',
-            trackingError
-        );
+        return res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
     }
-
-
-    return res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-    });
-}
 });
 
 

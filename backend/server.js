@@ -1445,38 +1445,44 @@ if (systemProtectedFields.includes(field)) {
             // التحقق من Stage
             // ------------------------------------------
 
-            if (field === 'Stage') {
+   if (
+    field === 'Stage' &&
+    tablePolicy.allowedStages.length > 0
+) {
 
-                if (!tablePolicy.allowedStages.includes(value)) {
+    if (!tablePolicy.allowedStages.includes(value)) {
 
-                    securityResult.rejected_fields.push({
-                        field: field,
-                        value: value,
-                        reason: 'Invalid Stage value'
-                    });
+        securityResult.rejected_fields.push({
+            field: field,
+            value: value,
+            reason: 'Invalid Stage value'
+        });
 
-                    continue;
-                }
-            }
+        continue;
+    }
+}
 
 
             // ------------------------------------------
             // التحقق من Status
             // ------------------------------------------
 
-            if (field === 'Status') {
+         if (
+    field === 'Status' &&
+    tablePolicy.allowedStatuses.length > 0
+) {
 
-                if (!tablePolicy.allowedStatuses.includes(value)) {
+    if (!tablePolicy.allowedStatuses.includes(value)) {
 
-                    securityResult.rejected_fields.push({
-                        field: field,
-                        value: value,
-                        reason: 'Invalid Status value'
-                    });
+        securityResult.rejected_fields.push({
+            field: field,
+            value: value,
+            reason: 'Invalid Status value'
+        });
 
-                    continue;
-                }
-            }
+        continue;
+    }
+}
 
 
             // إذا اجتاز الحقل الفحص

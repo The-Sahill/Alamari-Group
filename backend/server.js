@@ -1454,45 +1454,60 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 
 
 // ------------------------------------------
-// اختبار Generic Data Engine - قراءة فقط
+// التنفيذ الفعلي عبر Generic Update Engine
 // ------------------------------------------
 
-const targetRecord = await getRecordById(
-    securityResult.target_table,
-    aiResult.target_record_id
-);
+let executionResult = null;
 
-if (!targetRecord) {
+const canExecute =
+    securityResult.allowed === true &&
+    securityResult.operation === 'update' &&
+    confirmationResult.execution_allowed === true;
+
+if (canExecute) {
 
     console.log(
-        'Generic Engine: Target record not found'
+        'Execution authorized - starting Generic Update Engine'
+    );
+
+    executionResult =
+        await updateRecordById(
+            securityResult.target_table,
+            aiResult.target_record_id,
+            securityResult.validated_changes
+        );
+
+    console.log(
+        'Generic Update Engine: SUCCESS',
+        {
+            table: executionResult.table,
+            recordId: executionResult.recordId,
+            sheetRowNumber:
+                executionResult.sheetRowNumber,
+            changedFields:
+                Object.keys(executionResult.newValues)
+        }
     );
 
 } else {
 
     console.log(
-        'Generic Engine: Target record found:',
+        'Execution blocked by server:',
         {
-            table: targetRecord.table,
-            sheetName: targetRecord.sheetName,
-            keyColumn: targetRecord.keyColumn,
-            sheetRowNumber: targetRecord.sheetRowNumber,
-            recordId: aiResult.target_record_id
+            securityAllowed:
+                securityResult.allowed,
+
+            confirmationRequired:
+                confirmationResult.confirmation_required,
+
+            confirmed:
+                confirmationResult.confirmed,
+
+            executionAllowed:
+                confirmationResult.execution_allowed
         }
     );
 }
-
-
-
-
-
-        // ------------------------------------------
-        // لا يوجد تنفيذ فعلي حتى الآن
-        // ------------------------------------------
-
-        console.log(
-            'Execution blocked: analysis/security phase only'
-        );
 
 
         // ------------------------------------------

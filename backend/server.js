@@ -1479,45 +1479,45 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 
 
         // ------------------------------------------
-// Idempotency Check
-// منع تنفيذ نفس AI_Action_ID أكثر من مرة
-// ------------------------------------------
+        // Idempotency Check
+        // منع تنفيذ نفس AI_Action_ID أكثر من مرة
+        // ------------------------------------------
 
-if (action.AI_Action_ID) {
+        if (action.AI_Action_ID) {
 
-    const existingAction =
-        await getAIActionById(
-            action.AI_Action_ID
-        );
+            const existingAction =
+                await getAIActionById(
+                    action.AI_Action_ID
+                );
 
-    if (existingAction) {
+            if (existingAction) {
 
-        const existingStatus = String(
-            existingAction.data.Execution_Status || ''
-        ).trim();
+                const existingStatus = String(
+                    existingAction.data.Execution_Status || ''
+                ).trim();
 
-        if (existingStatus === 'تم التنفيذ') {
+                if (existingStatus === 'تم التنفيذ') {
 
-            console.log(
-                'Duplicate execution prevented:',
-                action.AI_Action_ID
-            );
+                    console.log(
+                        'Duplicate execution prevented:',
+                        action.AI_Action_ID
+                    );
 
-            return res.status(200).json({
-                success: true,
-                duplicate: true,
-                AI_Action_ID:
-                    action.AI_Action_ID,
+                    return res.status(200).json({
+                        success: true,
+                        duplicate: true,
+                        AI_Action_ID:
+                            action.AI_Action_ID,
 
-                status:
-                    'already_executed',
+                        status:
+                            'already_executed',
 
-                message:
-                    'Action was already executed'
-            });
+                        message:
+                            'Action was already executed'
+                    });
+                }
+            }
         }
-    }
-}
 
 
         // ------------------------------------------
@@ -1622,93 +1622,145 @@ if (action.AI_Action_ID) {
 
 
 
-// ------------------------------------------
-// التنفيذ الفعلي عبر Generic Update Engine
-// ------------------------------------------
+        // ------------------------------------------
+        // التنفيذ الفعلي عبر Generic Update Engine
+        // ------------------------------------------
 
-let executionResult = null;
+        let executionResult = null;
 
-const canExecute =
-    securityResult.allowed === true &&
-    securityResult.operation === 'update' &&
-    confirmationResult.execution_allowed === true;
+        const canExecute =
+            securityResult.allowed === true &&
+            securityResult.operation === 'update' &&
+            confirmationResult.execution_allowed === true;
 
-if (canExecute) {
+        if (canExecute) {
 
-    console.log(
-        'Execution authorized - starting Generic Update Engine'
-    );
+            console.log(
+                'Execution authorized - starting Generic Update Engine'
+            );
 
-    executionResult =
-        await updateRecordById(
-            securityResult.target_table,
-            aiResult.target_record_id,
-            securityResult.validated_changes
+            executionResult =
+                await updateRecordById(
+                    securityResult.target_table,
+                    aiResult.target_record_id,
+                    securityResult.validated_changes
+                );
+
+            console.log(
+                'Generic Update Engine: SUCCESS',
+                {
+                    table: executionResult.table,
+                    recordId: executionResult.recordId,
+                    sheetRowNumber:
+                        executionResult.sheetRowNumber,
+                    changedFields:
+                        Object.keys(executionResult.newValues)
+                }
+            );
+
+
+            await updateAIActionExecution(
+                action.AI_Action_ID,
+                'تم التنفيذ',
+                JSON.stringify({
+                    table:
+                        executionResult.table,
+
+                    recordId:
+                        executionResult.recordId,
+
+                    changedFields:
+                        Object.keys(
+                            executionResult.newValues
+                        ),
+
+                    oldValues:
+                        executionResult.oldValues,
+
+                    newValues:
+                        executionResult.newValues
+                }),
+                ''
+            );
+
+            console.log(
+                'AI Action marked as executed:',
+                action.AI_Action_ID
+            );
+
+
+      } else {
+
+    // ------------------------------------------
+    // رفض أمني حقيقي
+    // ------------------------------------------
+
+    if (securityResult.allowed === false) {
+
+        console.log(
+            'Execution rejected by Security Policy:',
+            securityResult.reason
         );
 
-    console.log(
-        'Generic Update Engine: SUCCESS',
-        {
-            table: executionResult.table,
-            recordId: executionResult.recordId,
-            sheetRowNumber:
-                executionResult.sheetRowNumber,
-            changedFields:
-                Object.keys(executionResult.newValues)
-        }
-    );
+        await updateAIActionExecution(
+            action.AI_Action_ID,
+            'ملغي',
+            JSON.stringify({
+                reason:
+                    securityResult.reason,
 
+                rejectedFields:
+                    securityResult.rejected_fields || []
+            }),
+            ''
+        );
 
-await updateAIActionExecution(
-    action.AI_Action_ID,
-    'تم التنفيذ',
-    JSON.stringify({
-        table:
-            executionResult.table,
+        console.log(
+            'AI Action marked as cancelled:',
+            action.AI_Action_ID
+        );
 
-        recordId:
-            executionResult.recordId,
+    }
 
-        changedFields:
-            Object.keys(
-                executionResult.newValues
-            ),
+    // ------------------------------------------
+    // العملية مسموحة لكن تنتظر التأكيد
+    // ------------------------------------------
 
-        oldValues:
-            executionResult.oldValues,
+    else if (
+        securityResult.confirmation_required === true &&
+        confirmationResult.confirmed !== true
+    ) {
 
-        newValues:
-            executionResult.newValues
-    }),
-    ''
-);
+        console.log(
+            'Execution waiting for confirmation:',
+            action.AI_Action_ID
+        );
 
-console.log(
-    'AI Action marked as executed:',
-    action.AI_Action_ID
-);
+        // لا نكتب "ملغي" ولا "فشل"
+        // ولا ننفذ أي تعديل
+    }
 
+    // ------------------------------------------
+    // أي حالة أخرى لم يسمح لها بالتنفيذ
+    // ------------------------------------------
 
-} else {
+    else {
 
-    console.log(
-        'Execution blocked by server:',
-        {
-            securityAllowed:
-                securityResult.allowed,
+        console.log(
+            'Execution not authorized:',
+            {
+                securityAllowed:
+                    securityResult.allowed,
 
-            confirmationRequired:
-                confirmationResult.confirmation_required,
+                confirmed:
+                    confirmationResult.confirmed,
 
-            confirmed:
-                confirmationResult.confirmed,
-
-            executionAllowed:
-                confirmationResult.execution_allowed
-        }
-    );
+                executionAllowed:
+                    confirmationResult.execution_allowed
+            }
+        );
+    }
 }
-
 
         // ------------------------------------------
         // إرجاع نتيجة التحليل + قرار السيرفر

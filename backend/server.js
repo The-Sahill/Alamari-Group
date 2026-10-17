@@ -30,6 +30,15 @@ const googleSheetsAuth = new google.auth.JWT({
     ]
 });
 
+
+
+
+
+
+
+
+
+
 const sheets = google.sheets({
     version: 'v4',
     auth: googleSheetsAuth
@@ -113,6 +122,167 @@ app.get('/webhook', (req, res) => {
         res.sendStatus(400);
     }
 });
+
+
+
+// ======================================================
+// Generic Google Sheets Data Engine
+// ======================================================
+
+const TABLE_CONFIG = {
+    DEALS: {
+        sheetName: 'الصفقات',
+        keyColumn: 'Deal_ID'
+    },
+
+    PROPERTIES: {
+        sheetName: 'العقارات',
+        keyColumn: 'Property_ID'
+    },
+
+    UNITS: {
+        sheetName: 'الوحدات',
+        keyColumn: 'Unit_ID'
+    },
+
+    PEOPLE: {
+        sheetName: 'الأشخاص',
+        keyColumn: 'Person_ID'
+    },
+
+    EMPLOYEES: {
+        sheetName: 'الموظفون',
+        keyColumn: 'Employee_ID'
+    },
+
+    REQUIREMENTS: {
+        sheetName: 'طلبات العملاء',
+        keyColumn: 'Requirement_ID'
+    },
+
+    VIEWINGS: {
+        sheetName: 'المعاينات',
+        keyColumn: 'Viewing_ID'
+    },
+
+    TASKS: {
+        sheetName: 'المهام',
+        keyColumn: 'Task_ID'
+    },
+
+    MAINTENANCE: {
+        sheetName: 'الصيانة',
+        keyColumn: 'Maintenance_ID'
+    }
+};
+
+
+// ======================================================
+// Get table configuration
+// ======================================================
+
+function getTableConfig(tableName) {
+    const normalizedTableName = String(tableName || '')
+        .trim()
+        .toUpperCase();
+
+    const config = TABLE_CONFIG[normalizedTableName];
+
+    if (!config) {
+        throw new Error(
+            `Table is not allowed: ${normalizedTableName}`
+        );
+    }
+
+    return config;
+}
+
+
+// ======================================================
+// Read any record from any allowed table
+// ======================================================
+
+async function getRecordById(tableName, recordId) {
+
+    const config = getTableConfig(tableName);
+
+    const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `'${config.sheetName}'!A:ZZ`
+    });
+
+    const rows = response.data.values || [];
+
+    if (rows.length === 0) {
+        throw new Error(
+            `Sheet is empty: ${config.sheetName}`
+        );
+    }
+
+    const headers = rows[0];
+
+    const keyColumnIndex =
+        headers.indexOf(config.keyColumn);
+
+    if (keyColumnIndex === -1) {
+        throw new Error(
+            `Key column ${config.keyColumn} was not found in ${config.sheetName}`
+        );
+    }
+
+    const matches = [];
+
+    for (let i = 1; i < rows.length; i++) {
+
+        const currentId =
+            String(rows[i][keyColumnIndex] || '').trim();
+
+        if (
+            currentId === String(recordId || '').trim()
+        ) {
+            matches.push({
+                rowIndex: i,
+                row: rows[i]
+            });
+        }
+    }
+
+    if (matches.length === 0) {
+        return null;
+    }
+
+    // حماية مهمة: المفتاح يجب ألا يتكرر
+    if (matches.length > 1) {
+        throw new Error(
+            `Duplicate key detected: ${recordId}`
+        );
+    }
+
+    const match = matches[0];
+
+    const record = {};
+
+    headers.forEach((header, index) => {
+
+        if (!header) {
+            return;
+        }
+
+        record[header] =
+            match.row[index] ?? '';
+    });
+
+    return {
+        table: tableName,
+        sheetName: config.sheetName,
+        keyColumn: config.keyColumn,
+
+        // رقم الصف الحقيقي في Google Sheets
+        sheetRowNumber: match.rowIndex + 1,
+
+        data: record
+    };
+}
 
 
 

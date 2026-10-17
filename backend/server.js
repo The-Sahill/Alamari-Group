@@ -1151,31 +1151,24 @@ financialFields: [
         allowedStatuses: []
     },
 
-    PEOPLE: {
-        keyField: 'Person_ID',
-        allowedWritableFields: [],
-        protectedFields: [
-            '_RowNumber',
-            'Person_ID',
-            'Created_At',
-            'Updated_At'
-        ],
-        // UNITS
-        financialFields: [
-            'Monthly_Service_Fee',
-            'sale_price_per_sqm',
-            'Sale_Price',
-            'Daily_Rent',
-            'Rental_Price_Monthly',
-            'Three_Month_Rent',
-            'Six_Month_Ren',
-            'Annual_Rent',
-            'Currency'
-        ],
-        sensitiveStatuses: [],
-        allowedStages: [],
-        allowedStatuses: []
-    },
+   PEOPLE: {
+    keyField: 'Person_ID',
+
+    allowedWritableFields: [],
+
+    protectedFields: [
+        '_RowNumber',
+        'Person_ID',
+        'Created_At',
+        'Updated_At'
+    ],
+
+    financialFields: [],
+
+    sensitiveStatuses: [],
+    allowedStages: [],
+    allowedStatuses: []
+},
 
     EMPLOYEES: {
         keyField: 'Employee_ID',
@@ -1192,40 +1185,47 @@ financialFields: [
         allowedStatuses: []
     },
 
-    REQUIREMENTS: {
-        keyField: 'Requirement_ID',
-        allowedWritableFields: [],
-        protectedFields: [
-            '_RowNumber',
-            'Requirement_ID',
-            'Created_At',
-            'Updated_At'
-        ],
-        financialFields: [],
-        sensitiveStatuses: [],
-        allowedStages: [],
-        allowedStatuses: []
-    },
+REQUIREMENTS: {
+    keyField: 'Requirement_ID',
 
-    VIEWINGS: {
-        keyField: 'Viewing_ID',
-        allowedWritableFields: [],
-        protectedFields: [
-            '_RowNumber',
-            'Viewing_ID',
-            'Created_At',
-            'Updated_At'
-        ],
-        // REQUIREMENTS
-        financialFields: [
-            'Min_Budget',
-            'Max_Budget',
-            'Currency'
-        ],
-        sensitiveStatuses: [],
-        allowedStages: [],
-        allowedStatuses: []
-    },
+    allowedWritableFields: [],
+
+    protectedFields: [
+        '_RowNumber',
+        'Requirement_ID',
+        'Created_At',
+        'Updated_At'
+    ],
+
+    financialFields: [
+        'Min_Budget',
+        'Max_Budget',
+        'Currency'
+    ],
+
+    sensitiveStatuses: [],
+    allowedStages: [],
+    allowedStatuses: []
+},
+
+VIEWINGS: {
+    keyField: 'Viewing_ID',
+
+    allowedWritableFields: [],
+
+    protectedFields: [
+        '_RowNumber',
+        'Viewing_ID',
+        'Created_At',
+        'Updated_At'
+    ],
+
+    financialFields: [],
+
+    sensitiveStatuses: [],
+    allowedStages: [],
+    allowedStatuses: []
+},
 
     TASKS: {
         keyField: 'Task_ID',

@@ -1479,6 +1479,48 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 
 
         // ------------------------------------------
+// Idempotency Check
+// منع تنفيذ نفس AI_Action_ID أكثر من مرة
+// ------------------------------------------
+
+if (action.AI_Action_ID) {
+
+    const existingAction =
+        await getAIActionById(
+            action.AI_Action_ID
+        );
+
+    if (existingAction) {
+
+        const existingStatus = String(
+            existingAction.data.Execution_Status || ''
+        ).trim();
+
+        if (existingStatus === 'تم التنفيذ') {
+
+            console.log(
+                'Duplicate execution prevented:',
+                action.AI_Action_ID
+            );
+
+            return res.status(200).json({
+                success: true,
+                duplicate: true,
+                AI_Action_ID:
+                    action.AI_Action_ID,
+
+                status:
+                    'already_executed',
+
+                message:
+                    'Action was already executed'
+            });
+        }
+    }
+}
+
+
+        // ------------------------------------------
         // تسجيل البيانات الأساسية فقط
         // ------------------------------------------
 
@@ -1615,6 +1657,37 @@ if (canExecute) {
                 Object.keys(executionResult.newValues)
         }
     );
+
+
+await updateAIActionExecution(
+    action.AI_Action_ID,
+    'تم التنفيذ',
+    JSON.stringify({
+        table:
+            executionResult.table,
+
+        recordId:
+            executionResult.recordId,
+
+        changedFields:
+            Object.keys(
+                executionResult.newValues
+            ),
+
+        oldValues:
+            executionResult.oldValues,
+
+        newValues:
+            executionResult.newValues
+    }),
+    ''
+);
+
+console.log(
+    'AI Action marked as executed:',
+    action.AI_Action_ID
+);
+
 
 } else {
 

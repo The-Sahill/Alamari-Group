@@ -568,29 +568,29 @@ const AI_SECURITY_POLICY = {
         keyField: 'Deal_ID',
 
         // الحقول التي يسمح لمحرك AI باقتراح تعديلها
-allowedWritableFields: [
-    'Person_ID',
-    'Requirement_ID',
-    'Transaction_Type',
-    'Property_ID',
-    'Unit_ID',
-    'Assigned_Employee_ID',
-    'Pipeline',
-    'Stage',
-    'Expected_Value',
-    'Currency',
-    'Expected_Commission',
-    'Final_Commission',
-    'Final_Value',
-    'Probability',
-    'Lead_Source',
-    'Last_Contact_At',
-    'Next_Action',
-    'Next_Action_Date',
-    'Lost_Reason',
-    'Closed_Date',
-    'Status'
-],
+        allowedWritableFields: [
+            'Person_ID',
+            'Requirement_ID',
+            'Transaction_Type',
+            'Property_ID',
+            'Unit_ID',
+            'Assigned_Employee_ID',
+            'Pipeline',
+            'Stage',
+            'Expected_Value',
+            'Currency',
+            'Expected_Commission',
+            'Final_Commission',
+            'Final_Value',
+            'Probability',
+            'Lead_Source',
+            'Last_Contact_At',
+            'Next_Action',
+            'Next_Action_Date',
+            'Lost_Reason',
+            'Closed_Date',
+            'Status'
+        ],
 
         // حقول لا يسمح للذكاء الاصطناعي بتعديلها مباشرة
         protectedFields: [
@@ -793,31 +793,31 @@ function evaluateAISecurity(action, aiResult) {
         // فحص كل حقل يريد AI تعديله
         // ----------------------------------------------
 
-      for (const [field, value] of changeEntries) {
+        for (const [field, value] of changeEntries) {
 
-    // أي حقل غير موجود في القائمة البيضاء مرفوض
-    if (!tablePolicy.allowedWritableFields.includes(field)) {
+            // أي حقل غير موجود في القائمة البيضاء مرفوض
+            if (!tablePolicy.allowedWritableFields.includes(field)) {
 
-        securityResult.rejected_fields.push({
-            field: field,
-            reason: 'Field is not in allowed writable fields'
-        });
+                securityResult.rejected_fields.push({
+                    field: field,
+                    reason: 'Field is not in allowed writable fields'
+                });
 
-        continue;
-    }
+                continue;
+            }
 
-    // حماية إضافية للحقول المحمية
-    if (tablePolicy.protectedFields.includes(field)) {
+            // حماية إضافية للحقول المحمية
+            if (tablePolicy.protectedFields.includes(field)) {
 
-        securityResult.rejected_fields.push({
-            field: field,
-            reason: 'Protected field'
-        });
+                securityResult.rejected_fields.push({
+                    field: field,
+                    reason: 'Protected field'
+                });
 
-        continue;
-    }
+                continue;
+            }
 
-    // بقية فحص Stage و Status يبقى كما هو
+            // بقية فحص Stage و Status يبقى كما هو
 
 
             // ------------------------------------------
@@ -989,14 +989,14 @@ function evaluateAISecurity(action, aiResult) {
 
 function evaluateConfirmation(action, securityResult) {
 
-const rawConfirmationStatus = String(
-    action.Confirmation_Status || ''
-).trim();
+    const rawConfirmationStatus = String(
+        action.Confirmation_Status || ''
+    ).trim();
 
-const confirmationStatus = rawConfirmationStatus
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/\s+/g, ' ')
-    .trim();
+    const confirmationStatus = rawConfirmationStatus
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/\s+/g, ' ')
+        .trim();
 
     const result = {
         confirmation_required: securityResult.confirmation_required,
@@ -1257,16 +1257,51 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
         );
 
         // ------------------------------------------
-// فحص بوابة التأكيد
+        // فحص بوابة التأكيد
+        // ------------------------------------------
+
+        const confirmationResult =
+            evaluateConfirmation(action, securityResult);
+
+        console.log(
+            'Confirmation Decision:',
+            confirmationResult
+        );
+
+
+
+
+// ------------------------------------------
+// اختبار Generic Data Engine - قراءة فقط
 // ------------------------------------------
 
-const confirmationResult =
-    evaluateConfirmation(action, securityResult);
-
-console.log(
-    'Confirmation Decision:',
-    confirmationResult
+const targetRecord = await getRecordById(
+    securityResult.target_table,
+    aiResult.target_record_id
 );
+
+if (!targetRecord) {
+
+    console.log(
+        'Generic Engine: Target record not found'
+    );
+
+} else {
+
+    console.log(
+        'Generic Engine: Target record found:',
+        {
+            table: targetRecord.table,
+            sheetName: targetRecord.sheetName,
+            keyColumn: targetRecord.keyColumn,
+            sheetRowNumber: targetRecord.sheetRowNumber,
+            recordId: aiResult.target_record_id
+        }
+    );
+}
+
+
+
 
 
         // ------------------------------------------
@@ -1295,13 +1330,13 @@ console.log(
             status:
                 'security_checked',
 
-         analysis: aiResult,
+            analysis: aiResult,
 
-security:
-    securityResult,
+            security:
+                securityResult,
 
-confirmation:
-    confirmationResult
+            confirmation:
+                confirmationResult
         });
 
 

@@ -469,6 +469,142 @@ async function updateRecordById(
 
 
 
+
+// ======================================================
+// AI Action Execution Tracking
+// ======================================================
+
+async function getAIActionById(aiActionId) {
+
+    const sheetName = 'إجراءات الذكاء الاصطناعي';
+
+    const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `'${sheetName}'!A:V`
+    });
+
+    const rows = response.data.values || [];
+
+    if (rows.length < 2) {
+        return null;
+    }
+
+    const headers = rows[0];
+
+    const idIndex = headers.indexOf('AI_Action_ID');
+
+    if (idIndex === -1) {
+        throw new Error(
+            'AI_Action_ID column not found'
+        );
+    }
+
+    for (let i = 1; i < rows.length; i++) {
+
+        if (
+            String(rows[i][idIndex] || '').trim() ===
+            String(aiActionId || '').trim()
+        ) {
+
+            const data = {};
+
+            headers.forEach((header, index) => {
+                if (header) {
+                    data[header] = rows[i][index] ?? '';
+                }
+            });
+
+            return {
+                sheetRowNumber: i + 1,
+                data
+            };
+        }
+    }
+
+    return null;
+}
+
+
+// ======================================================
+// Update AI Action execution result
+// ======================================================
+
+async function updateAIActionExecution(
+    aiActionId,
+    status,
+    executionResult = '',
+    errorMessage = ''
+) {
+
+    const sheetName = 'إجراءات الذكاء الاصطناعي';
+
+    const actionRecord =
+        await getAIActionById(aiActionId);
+
+    if (!actionRecord) {
+        throw new Error(
+            `AI Action not found: ${aiActionId}`
+        );
+    }
+
+    const headerResponse =
+        await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `'${sheetName}'!1:1`
+        });
+
+    const headers =
+        headerResponse.data.values?.[0] || [];
+
+    const valuesToUpdate = {
+        Execution_Status: status,
+        Execution_Result: executionResult,
+        Error_Message: errorMessage,
+        Executed_At: new Date().toISOString()
+    };
+
+    const updates = [];
+
+    for (
+        const [field, value]
+        of Object.entries(valuesToUpdate)
+    ) {
+
+        const columnIndex =
+            headers.indexOf(field);
+
+        if (columnIndex === -1) {
+            throw new Error(
+                `AI Action column not found: ${field}`
+            );
+        }
+
+        const columnLetter =
+            columnNumberToLetter(columnIndex + 1);
+
+        updates.push({
+            range:
+                `'${sheetName}'!${columnLetter}${actionRecord.sheetRowNumber}`,
+
+            values: [[value]]
+        });
+    }
+
+    await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+
+        requestBody: {
+            valueInputOption: 'USER_ENTERED',
+            data: updates
+        }
+    });
+
+    return true;
+}
+
+
+
+
 // =====================================================
 // AppSheet AI Actions Endpoint
 // =====================================================

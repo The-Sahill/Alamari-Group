@@ -1048,7 +1048,7 @@ const AI_SECURITY_POLICY = {
 // هذه الدالة لا تنفذ أي تعديل
 // ======================================================
 
-function evaluateAISecurity(action, aiResult) {
+async function evaluateAISecurity(action, aiResult) {
 
     const targetTable = String(
         aiResult.target_table ||
@@ -1185,29 +1185,66 @@ function evaluateAISecurity(action, aiResult) {
         // فحص كل حقل يريد AI تعديله
         // ----------------------------------------------
 
-        for (const [field, value] of changeEntries) {
+     for (const [field, value] of changeEntries) {
 
-            // أي حقل غير موجود في القائمة البيضاء مرفوض
-            if (!tablePolicy.allowedWritableFields.includes(field)) {
+    // ------------------------------------------
+    // 1. التأكد أن الحقل موجود فعليًا في الجدول
+    //    وأنه ليس الـ Key
+    // ------------------------------------------
 
-                securityResult.rejected_fields.push({
-                    field: field,
-                    reason: 'Field is not in allowed writable fields'
-                });
+    const tableFieldCheck =
+        await validateTableField(
+            targetTable,
+            field
+        );
 
-                continue;
-            }
+    if (!tableFieldCheck.allowed) {
 
-            // حماية إضافية للحقول المحمية
-            if (tablePolicy.protectedFields.includes(field)) {
+        securityResult.rejected_fields.push({
+            field: field,
+            reason: tableFieldCheck.reason
+        });
 
-                securityResult.rejected_fields.push({
-                    field: field,
-                    reason: 'Protected field'
-                });
+        continue;
+    }
 
-                continue;
-            }
+
+    // ------------------------------------------
+    // 2. القائمة البيضاء الأمنية
+    // ------------------------------------------
+
+    if (
+        !tablePolicy.allowedWritableFields.includes(field)
+    ) {
+
+        securityResult.rejected_fields.push({
+            field: field,
+            reason:
+                'Field is not in allowed writable fields'
+        });
+
+        continue;
+    }
+
+
+    // ------------------------------------------
+    // 3. الحقول المحمية
+    // ------------------------------------------
+
+    if (
+        tablePolicy.protectedFields.includes(field)
+    ) {
+
+        securityResult.rejected_fields.push({
+            field: field,
+            reason: 'Protected field'
+        });
+
+        continue;
+    }
+
+
+    // بقية فحص Stage و Status يبقى كما هو
 
             // بقية فحص Stage و Status يبقى كما هو
 
@@ -1673,8 +1710,11 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
         // تطبيق Security Policy الخاصة بالسيرفر
         // ------------------------------------------
 
-        const securityResult =
-            evaluateAISecurity(action, aiResult);
+       const securityResult =
+    await evaluateAISecurity(
+        action,
+        aiResult
+    );
 
         console.log(
             'Server Security Decision:',

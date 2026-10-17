@@ -1175,14 +1175,21 @@ function evaluateConfirmation(action, securityResult) {
         action.Confirmation_Status || ''
     ).trim();
 
+    // توحيد أشكال الهمزة حتى:
+    // "تم التأكيد" و "تم التاكيد"
+    // تتم مقارنتهما بنفس الطريقة
     const confirmationStatus = rawConfirmationStatus
         .replace(/[أإآ]/g, 'ا')
         .replace(/\s+/g, ' ')
         .trim();
 
     const result = {
-        confirmation_required: securityResult.confirmation_required,
-        confirmation_status: confirmationStatus,
+        confirmation_required:
+            securityResult.confirmation_required,
+
+        confirmation_status:
+            confirmationStatus,
+
         confirmed: false,
         execution_allowed: false,
         reason: ''
@@ -1190,13 +1197,12 @@ function evaluateConfirmation(action, securityResult) {
 
 
     // ==================================================
-    // 1. إذا كانت Security Policy رفضت العملية
-    // التأكيد لا يستطيع تجاوز قرار الأمان
+    // 1. Security Policy رفضت العملية
+    // لا يمكن للتأكيد تجاوز قرار الأمان
     // ==================================================
 
     if (!securityResult.allowed) {
-        result.confirmed = false;
-        result.execution_allowed = false;
+
         result.reason =
             'Operation rejected by server security policy';
 
@@ -1205,52 +1211,46 @@ function evaluateConfirmation(action, securityResult) {
 
 
     // ==================================================
-    // 2. إذا العملية لا تحتاج تأكيد
+    // 2. العملية لا تحتاج تأكيد
+    // Security وافقت => يسمح بالتنفيذ
     // ==================================================
 
     if (!securityResult.confirmation_required) {
 
         result.confirmed = true;
-
-        // سنبقي التنفيذ الفعلي مغلقًا مؤقتًا
-        result.execution_allowed = false;
+        result.execution_allowed = true;
 
         result.reason =
-            'Confirmation is not required';
+            'Execution authorized - confirmation not required';
 
         return result;
     }
 
 
     // ==================================================
-    // 3. بانتظار التأكيد
-    // ==================================================
-
-    if (confirmationStatus === 'بانتظار التاكيد') {
-
-        result.confirmed = false;
-        result.execution_allowed = false;
-        result.reason =
-            'Waiting for confirmation';
-
-        return result;
-    }
-
-
-    // ==================================================
-    // 4. تم التأكيد
+    // 3. العملية تحتاج تأكيد وتم التأكيد
     // ==================================================
 
     if (confirmationStatus === 'تم التاكيد') {
 
         result.confirmed = true;
-
-        // مهم:
-        // لا نفتح التنفيذ الحقيقي حتى الآن
-        result.execution_allowed = false;
+        result.execution_allowed = true;
 
         result.reason =
-            'Confirmation received - execution still disabled';
+            'Execution authorized after confirmation';
+
+        return result;
+    }
+
+
+    // ==================================================
+    // 4. بانتظار التأكيد
+    // ==================================================
+
+    if (confirmationStatus === 'بانتظار التاكيد') {
+
+        result.reason =
+            'Waiting for confirmation';
 
         return result;
     }
@@ -1262,8 +1262,6 @@ function evaluateConfirmation(action, securityResult) {
 
     if (confirmationStatus === 'تم الرفض') {
 
-        result.confirmed = false;
-        result.execution_allowed = false;
         result.reason =
             'Operation was rejected';
 
@@ -1277,8 +1275,6 @@ function evaluateConfirmation(action, securityResult) {
 
     if (confirmationStatus === 'انتهت المهلة') {
 
-        result.confirmed = false;
-        result.execution_allowed = false;
         result.reason =
             'Confirmation expired';
 
@@ -1287,15 +1283,12 @@ function evaluateConfirmation(action, securityResult) {
 
 
     // ==================================================
-    // 7. غير مطلوب
-    // لكن Security Policy تقول إن التأكيد مطلوب
-    // إذًا نرفض التنفيذ
+    // 7. AppSheet يقول غير مطلوب
+    // لكن Security Policy تطلب تأكيد
     // ==================================================
 
     if (confirmationStatus === 'غير مطلوب') {
 
-        result.confirmed = false;
-        result.execution_allowed = false;
         result.reason =
             'Server requires confirmation but status is not required';
 
@@ -1307,8 +1300,6 @@ function evaluateConfirmation(action, securityResult) {
     // 8. حالة فارغة أو غير معروفة
     // ==================================================
 
-    result.confirmed = false;
-    result.execution_allowed = false;
     result.reason =
         'Confirmation status is missing or invalid';
 

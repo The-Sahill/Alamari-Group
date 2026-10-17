@@ -1333,18 +1333,31 @@ async function evaluateAISecurity(action, aiResult) {
     // 2. القائمة البيضاء الأمنية
     // ------------------------------------------
 
-    if (
-        !tablePolicy.allowedWritableFields.includes(field)
-    ) {
+// ------------------------------------------
+// القائمة البيضاء
+// DEALS يبقى بسياسة صارمة كما اختبرناه.
+// بقية الجداول تعتمد على:
+// 1) وجود الحقل فعليًا في Sheet
+// 2) ألا يكون Key
+// 3) ألا يكون Protected
+// ------------------------------------------
 
-        securityResult.rejected_fields.push({
-            field: field,
-            reason:
-                'Field is not in allowed writable fields'
-        });
+const usesStrictWhitelist =
+    tablePolicy.allowedWritableFields.length > 0;
 
-        continue;
-    }
+if (
+    usesStrictWhitelist &&
+    !tablePolicy.allowedWritableFields.includes(field)
+) {
+
+    securityResult.rejected_fields.push({
+        field: field,
+        reason:
+            'Field is not in allowed writable fields'
+    });
+
+    continue;
+}
 
 
     // ------------------------------------------
@@ -1362,6 +1375,40 @@ async function evaluateAISecurity(action, aiResult) {
 
         continue;
     }
+
+
+
+
+
+
+// ------------------------------------------
+// حماية عامة للحقول النظامية
+// ------------------------------------------
+
+const systemProtectedFields = [
+    'Created_At',
+    'Created_By',
+    'Updated_At',
+    'Updated_By',
+    'Delete_Confirmation'
+];
+
+if (systemProtectedFields.includes(field)) {
+
+    securityResult.rejected_fields.push({
+        field: field,
+        reason:
+            'System-managed field cannot be modified by AI'
+    });
+
+    continue;
+}
+
+
+
+
+
+
 
 
     // بقية فحص Stage و Status يبقى كما هو

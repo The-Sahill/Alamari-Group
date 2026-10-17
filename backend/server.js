@@ -1689,26 +1689,78 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             );
 
 
-        } else {
+      } else {
 
-            console.log(
-                'Execution blocked by server:',
-                {
-                    securityAllowed:
-                        securityResult.allowed,
+    // ------------------------------------------
+    // رفض أمني حقيقي
+    // ------------------------------------------
 
-                    confirmationRequired:
-                        confirmationResult.confirmation_required,
+    if (securityResult.allowed === false) {
 
-                    confirmed:
-                        confirmationResult.confirmed,
+        console.log(
+            'Execution rejected by Security Policy:',
+            securityResult.reason
+        );
 
-                    executionAllowed:
-                        confirmationResult.execution_allowed
-                }
-            );
-        }
+        await updateAIActionExecution(
+            action.AI_Action_ID,
+            'ملغي',
+            JSON.stringify({
+                reason:
+                    securityResult.reason,
 
+                rejectedFields:
+                    securityResult.rejected_fields || []
+            }),
+            ''
+        );
+
+        console.log(
+            'AI Action marked as cancelled:',
+            action.AI_Action_ID
+        );
+
+    }
+
+    // ------------------------------------------
+    // العملية مسموحة لكن تنتظر التأكيد
+    // ------------------------------------------
+
+    else if (
+        securityResult.confirmation_required === true &&
+        confirmationResult.confirmed !== true
+    ) {
+
+        console.log(
+            'Execution waiting for confirmation:',
+            action.AI_Action_ID
+        );
+
+        // لا نكتب "ملغي" ولا "فشل"
+        // ولا ننفذ أي تعديل
+    }
+
+    // ------------------------------------------
+    // أي حالة أخرى لم يسمح لها بالتنفيذ
+    // ------------------------------------------
+
+    else {
+
+        console.log(
+            'Execution not authorized:',
+            {
+                securityAllowed:
+                    securityResult.allowed,
+
+                confirmed:
+                    confirmationResult.confirmed,
+
+                executionAllowed:
+                    confirmationResult.execution_allowed
+            }
+        );
+    }
+}
 
         // ------------------------------------------
         // إرجاع نتيجة التحليل + قرار السيرفر

@@ -1116,7 +1116,10 @@ const AI_SECURITY_POLICY = {
             'Created_At',
             'Updated_At'
         ],
-        financialFields: [],
+            financialFields: [
+            'Service_Fee_Fixed',
+            'Service_Fee_Rate'
+        ],
         sensitiveStatuses: [],
         allowedStages: [],
         allowedStatuses: []
@@ -1131,11 +1134,18 @@ const AI_SECURITY_POLICY = {
             'Created_At',
             'Updated_At'
         ],
-        // PROPERTIES
-        financialFields: [
-            'Service_Fee_Fixed',
-            'Service_Fee_Rate'
-        ],
+    // الحقول المالية للوحدات
+financialFields: [
+    'Monthly_Service_Fee',
+    'sale_price_per_sqm',
+    'Sale_Price',
+    'Daily_Rent',
+    'Rental_Price_Monthly',
+    'Three_Month_Rent',
+    'Six_Month_Ren',
+    'Annual_Rent',
+    'Currency'
+],
         sensitiveStatuses: [],
         allowedStages: [],
         allowedStatuses: []

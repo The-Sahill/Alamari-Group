@@ -705,7 +705,7 @@ async function analyzeAppSheetAction(action) {
 الإجراء المطلوب: ${action.Requested_Action || ''}
 الجدول المستهدف: ${action.Target_Table || ''}
 الحقول التقنية الحقيقية الموجودة في الجدول:
-${targetTableHeaders.join(', ')}
+${action.targetTableHeaders.join(', ')}
 
 مهم جدًا:
 عند إنشاء changes يجب استخدام أسماء الحقول التقنية الموجودة في القائمة أعلاه حرفيًا.

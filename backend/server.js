@@ -287,6 +287,188 @@ async function getRecordById(tableName, recordId) {
 
 
 
+
+// ======================================================
+// Convert column number to Google Sheets letter
+// ======================================================
+
+function columnNumberToLetter(columnNumber) {
+    let letter = '';
+
+    while (columnNumber > 0) {
+        const remainder = (columnNumber - 1) % 26;
+
+        letter =
+            String.fromCharCode(65 + remainder) + letter;
+
+        columnNumber =
+            Math.floor((columnNumber - 1) / 26);
+    }
+
+    return letter;
+}
+
+
+// ======================================================
+// Generic Update Engine
+// ======================================================
+
+async function updateRecordById(
+    tableName,
+    recordId,
+    validatedChanges
+) {
+
+    if (
+        !validatedChanges ||
+        typeof validatedChanges !== 'object' ||
+        Array.isArray(validatedChanges) ||
+        Object.keys(validatedChanges).length === 0
+    ) {
+        throw new Error(
+            'No validated changes were provided'
+        );
+    }
+
+
+    // ------------------------------------------
+    // قراءة السجل أولاً
+    // ------------------------------------------
+
+    const targetRecord =
+        await getRecordById(
+            tableName,
+            recordId
+        );
+
+    if (!targetRecord) {
+        throw new Error(
+            `Target record not found: ${recordId}`
+        );
+    }
+
+
+    const config =
+        getTableConfig(tableName);
+
+
+    // ------------------------------------------
+    // قراءة Header الحقيقي من Google Sheets
+    // ------------------------------------------
+
+    const headerResponse =
+        await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `'${config.sheetName}'!1:1`
+        });
+
+    const headers =
+        headerResponse.data.values?.[0] || [];
+
+
+    const updates = [];
+    const oldValues = {};
+    const newValues = {};
+
+
+    // ------------------------------------------
+    // تجهيز التعديلات
+    // ------------------------------------------
+
+    for (
+        const [field, newValue]
+        of Object.entries(validatedChanges)
+    ) {
+
+        // حماية إضافية:
+        // ممنوع تعديل المفتاح الأساسي
+        if (field === config.keyColumn) {
+            throw new Error(
+                `Key column cannot be modified: ${field}`
+            );
+        }
+
+
+        const columnIndex =
+            headers.indexOf(field);
+
+        if (columnIndex === -1) {
+            throw new Error(
+                `Column not found: ${field}`
+            );
+        }
+
+
+        const columnLetter =
+            columnNumberToLetter(
+                columnIndex + 1
+            );
+
+
+        oldValues[field] =
+            targetRecord.data[field] ?? '';
+
+        newValues[field] =
+            newValue;
+
+
+        updates.push({
+            range:
+                `'${config.sheetName}'!${columnLetter}${targetRecord.sheetRowNumber}`,
+
+            values: [
+                [newValue]
+            ]
+        });
+    }
+
+
+    // ------------------------------------------
+    // تنفيذ جميع التعديلات دفعة واحدة
+    // ------------------------------------------
+
+    await sheets.spreadsheets.values.batchUpdate({
+
+        spreadsheetId:
+            SPREADSHEET_ID,
+
+        requestBody: {
+
+            valueInputOption:
+                'USER_ENTERED',
+
+            data:
+                updates
+        }
+    });
+
+
+    return {
+        success: true,
+
+        table:
+            tableName,
+
+        recordId:
+            recordId,
+
+        sheetName:
+            config.sheetName,
+
+        sheetRowNumber:
+            targetRecord.sheetRowNumber,
+
+        oldValues:
+            oldValues,
+
+        newValues:
+            newValues
+    };
+}
+
+
+
+
 // =====================================================
 // AppSheet AI Actions Endpoint
 // =====================================================

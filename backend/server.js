@@ -1039,6 +1039,126 @@ const AI_SECURITY_POLICY = {
             'مغلقة - خاسرة',
             'مؤرشفة'
         ]
+   },
+
+    PROPERTIES: {
+        keyField: 'Property_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Property_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
+
+    UNITS: {
+        keyField: 'Unit_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Unit_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
+
+    PEOPLE: {
+        keyField: 'Person_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Person_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
+
+    EMPLOYEES: {
+        keyField: 'Employee_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Employee_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
+
+    REQUIREMENTS: {
+        keyField: 'Requirement_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Requirement_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
+
+    VIEWINGS: {
+        keyField: 'Viewing_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Viewing_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
+
+    TASKS: {
+        keyField: 'Task_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Task_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
+
+    MAINTENANCE: {
+        keyField: 'Maintenance_ID',
+        allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Maintenance_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+        financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
     }
 };
 

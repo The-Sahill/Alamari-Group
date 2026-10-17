@@ -1170,20 +1170,37 @@ financialFields: [
     allowedStatuses: []
 },
 
-    EMPLOYEES: {
-        keyField: 'Employee_ID',
-        allowedWritableFields: [],
-        protectedFields: [
-            '_RowNumber',
-            'Employee_ID',
-            'Created_At',
-            'Updated_At'
-        ],
-        financialFields: [],
-        sensitiveStatuses: [],
-        allowedStages: [],
-        allowedStatuses: []
-    },
+  protectedFields: [
+    '_RowNumber',
+    'Employee_ID',
+    'Created_At',
+    'Updated_At',
+
+    // الهوية والصلاحيات الإدارية
+    'Role',
+    'Manager_ID',
+    'Department',
+    'Job_Title',
+    'Branch',
+    'Active',
+    'AppSheet_Email',
+
+    // صلاحيات النظام
+    'Can_View_All_Leads',
+    'Can_Reassign_Leads',
+    'Can_View_Financial_Data',
+    'Can_Manage_Properties',
+    'Can_Manage_Leases',
+    'Can_Manage_Maintenance',
+    'Can_View_AI_Actions',
+    'Can_View_Audit_Log',
+    'Can_Manage_System_Settings',
+    'Can_Manage_Lookups',
+    'Can_Manage_Ownerships',
+    'Can_Manage_Employees',
+    'Can_Use_AI_Commands'
+],
+
 
 REQUIREMENTS: {
     keyField: 'Requirement_ID',

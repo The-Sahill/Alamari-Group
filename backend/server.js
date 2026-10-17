@@ -1791,18 +1791,56 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 
 
 
-    } catch (error) {
+  } catch (error) {
 
+    console.error(
+        'AppSheet AI Action error:',
+        error
+    );
+
+    // ------------------------------------------
+    // تسجيل الخطأ التقني في AI Action
+    // ------------------------------------------
+
+    try {
+
+        const failedActionId =
+            req.body?.AI_Action_ID;
+
+        if (failedActionId) {
+
+            await updateAIActionExecution(
+                failedActionId,
+                'فشل',
+                '',
+                String(
+                    error?.message ||
+                    'Unknown execution error'
+                )
+            );
+
+            console.log(
+                'AI Action marked as failed:',
+                failedActionId
+            );
+        }
+
+    } catch (trackingError) {
+
+        // إذا تعذر تسجيل حالة الفشل،
+        // نحافظ على الخطأ الأصلي ولا نخفيه
         console.error(
-            'AppSheet AI Action error:',
-            error
+            'Failed to record AI Action failure:',
+            trackingError
         );
-
-        return res.status(500).json({
-            success: false,
-            error: 'Internal server error'
-        });
     }
+
+
+    return res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+    });
+}
 });
 
 

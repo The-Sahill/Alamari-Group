@@ -704,6 +704,14 @@ async function analyzeAppSheetAction(action) {
 النص المحول: ${action.Transcription || ''}
 الإجراء المطلوب: ${action.Requested_Action || ''}
 الجدول المستهدف: ${action.Target_Table || ''}
+الحقول التقنية الحقيقية الموجودة في الجدول:
+${targetTableHeaders.join(', ')}
+
+مهم جدًا:
+عند إنشاء changes يجب استخدام أسماء الحقول التقنية الموجودة في القائمة أعلاه حرفيًا.
+ممنوع اختراع اسم حقل جديد أو ترجمة اسم الحقل.
+إذا أراد المستخدم تعديل "عنوان المهمة" وكان الحقل الموجود هو Title، استخدم Title.
+إذا لم تجد حقلًا مناسبًا في القائمة، لا تخترع حقلًا.
 السجل المستهدف: ${action.Target_Record_ID || ''}
 مستوى الخطورة القادم من AppSheet: ${action.Risk_Level || ''}
 هل يحتاج تأكيد حسب AppSheet: ${action.Confirmation_Required || ''}

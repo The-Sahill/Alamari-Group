@@ -223,6 +223,55 @@ async function getTableHeaders(tableName) {
 }
 
 
+
+
+async function validateTableField(
+    tableName,
+    fieldName
+) {
+
+    const config =
+        getTableConfig(tableName);
+
+    const field =
+        String(fieldName || '').trim();
+
+    if (!field) {
+        return {
+            allowed: false,
+            reason:
+                'Field name is missing'
+        };
+    }
+
+    // المفتاح ممنوع تعديله دائمًا
+    if (field === config.keyColumn) {
+        return {
+            allowed: false,
+            reason:
+                'Key column cannot be modified'
+        };
+    }
+
+    const headers =
+        await getTableHeaders(tableName);
+
+    if (!headers.includes(field)) {
+        return {
+            allowed: false,
+            reason:
+                'Field does not exist in target table'
+        };
+    }
+
+    return {
+        allowed: true,
+        reason:
+            'Field exists and is not the key column'
+    };
+}
+
+
 // ======================================================
 // Read any record from any allowed table
 // ======================================================

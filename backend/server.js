@@ -198,6 +198,31 @@ function getTableConfig(tableName) {
 }
 
 
+async function getTableHeaders(tableName) {
+
+    const config =
+        getTableConfig(tableName);
+
+    const response =
+        await sheets.spreadsheets.values.get({
+            spreadsheetId:
+                SPREADSHEET_ID,
+
+            range:
+                `'${config.sheetName}'!1:1`
+        });
+
+    const headers =
+        response.data.values?.[0] || [];
+
+    return headers
+        .map(header =>
+            String(header || '').trim()
+        )
+        .filter(Boolean);
+}
+
+
 // ======================================================
 // Read any record from any allowed table
 // ======================================================

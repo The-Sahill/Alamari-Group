@@ -528,12 +528,13 @@ function evaluateEmployeePermission(
     const result = {
         allowed: false,
         reason: '',
-        required_permission: null
+        required_permissions: [],
+        missing_permissions: []
     };
 
 
     // ------------------------------------------
-    // التحقق الأساسي من الموظف فشل
+    // التحقق الأساسي من هوية الموظف
     // ------------------------------------------
 
     if (!authorizationResult.authorized) {
@@ -562,73 +563,38 @@ function evaluateEmployeePermission(
 
 
     // ------------------------------------------
-    // EMPLOYEES
+    // تحديد صلاحيات الجدول المطلوبة
     // ------------------------------------------
 
     if (table === 'EMPLOYEES') {
 
-        result.required_permission =
-            'Can_Manage_Employees';
-
-        result.allowed =
-            employee.Can_Manage_Employees === true;
-
-        result.reason =
-            result.allowed
-                ? 'Employee management permission verified'
-                : 'Employee does not have permission to manage employees';
-
-        return result;
+        result.required_permissions.push(
+            'Can_Manage_Employees'
+        );
     }
 
-
-    // ------------------------------------------
-    // PROPERTIES + UNITS
-    // ------------------------------------------
 
     if (
         table === 'PROPERTIES' ||
         table === 'UNITS'
     ) {
 
-        result.required_permission =
-            'Can_Manage_Properties';
-
-        result.allowed =
-            employee.Can_Manage_Properties === true;
-
-        result.reason =
-            result.allowed
-                ? 'Property management permission verified'
-                : 'Employee does not have permission to manage properties';
-
-        return result;
+        result.required_permissions.push(
+            'Can_Manage_Properties'
+        );
     }
 
-
-    // ------------------------------------------
-    // MAINTENANCE
-    // ------------------------------------------
 
     if (table === 'MAINTENANCE') {
 
-        result.required_permission =
-            'Can_Manage_Maintenance';
-
-        result.allowed =
-            employee.Can_Manage_Maintenance === true;
-
-        result.reason =
-            result.allowed
-                ? 'Maintenance management permission verified'
-                : 'Employee does not have permission to manage maintenance';
-
-        return result;
+        result.required_permissions.push(
+            'Can_Manage_Maintenance'
+        );
     }
 
 
     // ------------------------------------------
-    // الحقول المالية
+    // هل العملية تحتوي حقولًا مالية؟
     // ------------------------------------------
 
     const tablePolicy =
@@ -643,30 +609,68 @@ function evaluateEmployeePermission(
                 financialFields.includes(field)
         );
 
+
     if (containsFinancialChange) {
 
-        result.required_permission =
-            'Can_View_Financial_Data';
+        result.required_permissions.push(
+            'Can_View_Financial_Data'
+        );
+    }
 
-        result.allowed =
-            employee.Can_View_Financial_Data === true;
+
+    // ------------------------------------------
+    // إزالة أي تكرار
+    // ------------------------------------------
+
+    result.required_permissions =
+        [
+            ...new Set(
+                result.required_permissions
+            )
+        ];
+
+
+    // ------------------------------------------
+    // فحص جميع الصلاحيات المطلوبة
+    // ------------------------------------------
+
+    for (
+        const permission
+        of result.required_permissions
+    ) {
+
+        if (employee[permission] !== true) {
+
+            result.missing_permissions.push(
+                permission
+            );
+        }
+    }
+
+
+    // ------------------------------------------
+    // القرار النهائي
+    // ------------------------------------------
+
+    if (
+        result.missing_permissions.length > 0
+    ) {
+
+        result.allowed = false;
 
         result.reason =
-            result.allowed
-                ? 'Financial permission verified'
-                : 'Employee does not have permission for financial operations';
+            'Employee is missing one or more required permissions';
 
         return result;
     }
 
 
-    // ------------------------------------------
-    // العمليات العادية
-    // ------------------------------------------
-
     result.allowed = true;
+
     result.reason =
-        'No additional table permission is required';
+        result.required_permissions.length > 0
+            ? 'All required employee permissions verified'
+            : 'No additional table permission is required';
 
     return result;
 }

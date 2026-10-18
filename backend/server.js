@@ -2374,6 +2374,173 @@ function evaluateConfirmation(action, securityResult) {
 
 
 
+
+
+
+async function authorizeAIAction(action) {
+
+    const employeeId =
+        String(
+            action.Employee_ID || ''
+        ).trim();
+
+    const userType =
+        String(
+            action.User_Type || ''
+        ).trim();
+
+
+    // ------------------------------------------
+    // يجب وجود Employee_ID
+    // ------------------------------------------
+
+    if (!employeeId) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: '',
+            employee: null,
+            reason:
+                'Employee_ID is required for AI command execution'
+        };
+    }
+
+
+    // ------------------------------------------
+    // قراءة الموظف من المصدر الحقيقي
+    // ------------------------------------------
+
+    const employeeRecord =
+        await getRecordById(
+            'EMPLOYEES',
+            employeeId
+        );
+
+
+    if (!employeeRecord) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: employeeId,
+            employee: null,
+            reason:
+                'Employee record was not found'
+        };
+    }
+
+
+    const employee =
+        employeeRecord.data;
+
+
+    // ------------------------------------------
+    // تحويل Yes/No إلى Boolean
+    // ------------------------------------------
+
+    const isTrue = value => {
+
+        const normalized =
+            String(value || '')
+            .trim()
+            .toLowerCase();
+
+        return [
+            'true',
+            'yes',
+            '1',
+            'نعم'
+        ].includes(normalized);
+    };
+
+
+    // ------------------------------------------
+    // الموظف يجب أن يكون فعالًا
+    // ------------------------------------------
+
+    if (!isTrue(employee.Active)) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: employeeId,
+            employee: null,
+            reason:
+                'Employee is not active'
+        };
+    }
+
+
+    // ------------------------------------------
+    // صلاحية استخدام أوامر AI
+    // ------------------------------------------
+
+    if (!isTrue(employee.Can_Use_AI_Commands)) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: employeeId,
+            employee: null,
+            reason:
+                'Employee is not allowed to use AI commands'
+        };
+    }
+
+
+    // ------------------------------------------
+    // نجح التحقق
+    // ------------------------------------------
+
+    return {
+        authorized: true,
+        user_type: userType,
+        employee_id: employeeId,
+
+        employee: {
+            Employee_ID:
+                employee.Employee_ID,
+
+            Role:
+                employee.Role,
+
+            Department:
+                employee.Department,
+
+            Can_View_Financial_Data:
+                isTrue(
+                    employee.Can_View_Financial_Data
+                ),
+
+            Can_Manage_Properties:
+                isTrue(
+                    employee.Can_Manage_Properties
+                ),
+
+            Can_Manage_Leases:
+                isTrue(
+                    employee.Can_Manage_Leases
+                ),
+
+            Can_Manage_Maintenance:
+                isTrue(
+                    employee.Can_Manage_Maintenance
+                ),
+
+            Can_Manage_Employees:
+                isTrue(
+                    employee.Can_Manage_Employees
+                )
+        },
+
+        reason:
+            'Employee identity and AI permission verified'
+    };
+}
+
+
+
 // ======================================================
 // AppSheet AI Action Endpoint
 // ======================================================

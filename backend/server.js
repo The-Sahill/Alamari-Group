@@ -2327,6 +2327,104 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
             securityResult
         );
 
+
+
+
+
+
+// ==================================================
+// Authorization Layer
+// ==================================================
+
+let authorizationResult = null;
+let permissionResult = null;
+
+const employeeId =
+    String(
+        action.Employee_ID || ''
+    ).trim();
+
+
+// --------------------------------------------------
+// إذا كان الطلب مرتبطًا بموظف
+// --------------------------------------------------
+
+if (employeeId) {
+
+    authorizationResult =
+        await authorizeAIAction(action);
+
+    console.log(
+        'Employee Authorization Decision:',
+        authorizationResult
+    );
+
+
+    // فشل التحقق من هوية/صلاحية استخدام AI
+    if (!authorizationResult.authorized) {
+
+        securityResult.allowed = false;
+        securityResult.execution_allowed_now = false;
+        securityResult.reason =
+            authorizationResult.reason;
+
+        console.log(
+            'Execution blocked by Employee Authorization:',
+            authorizationResult.reason
+        );
+
+    } else {
+
+        // ------------------------------------------
+        // فحص صلاحيات الجدول والحقول
+        // ------------------------------------------
+
+        permissionResult =
+            evaluateEmployeePermission(
+                authorizationResult,
+                securityResult
+            );
+
+        console.log(
+            'Employee Permission Decision:',
+            permissionResult
+        );
+
+
+        if (!permissionResult.allowed) {
+
+            securityResult.allowed = false;
+            securityResult.execution_allowed_now = false;
+
+            securityResult.reason =
+                permissionResult.reason;
+
+            console.log(
+                'Execution blocked by Employee Permissions:',
+                {
+                    required:
+                        permissionResult.required_permissions,
+
+                    missing:
+                        permissionResult.missing_permissions
+                }
+            );
+        }
+    }
+
+} else {
+
+    console.log(
+        'No Employee_ID - employee authorization layer skipped'
+    );
+}
+
+
+
+
+
+
+
         // ------------------------------------------
         // فحص بوابة التأكيد
         // ------------------------------------------

@@ -520,7 +520,156 @@ async function authorizeAIAction(action) {
     };
 }
 
+function evaluateEmployeePermission(
+    authorizationResult,
+    securityResult
+) {
 
+    const result = {
+        allowed: false,
+        reason: '',
+        required_permission: null
+    };
+
+
+    // ------------------------------------------
+    // التحقق الأساسي من الموظف فشل
+    // ------------------------------------------
+
+    if (!authorizationResult.authorized) {
+
+        result.reason =
+            authorizationResult.reason;
+
+        return result;
+    }
+
+
+    const employee =
+        authorizationResult.employee;
+
+    const table =
+        String(
+            securityResult.target_table || ''
+        )
+        .trim()
+        .toUpperCase();
+
+    const changedFields =
+        Object.keys(
+            securityResult.validated_changes || {}
+        );
+
+
+    // ------------------------------------------
+    // EMPLOYEES
+    // ------------------------------------------
+
+    if (table === 'EMPLOYEES') {
+
+        result.required_permission =
+            'Can_Manage_Employees';
+
+        result.allowed =
+            employee.Can_Manage_Employees === true;
+
+        result.reason =
+            result.allowed
+                ? 'Employee management permission verified'
+                : 'Employee does not have permission to manage employees';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // PROPERTIES + UNITS
+    // ------------------------------------------
+
+    if (
+        table === 'PROPERTIES' ||
+        table === 'UNITS'
+    ) {
+
+        result.required_permission =
+            'Can_Manage_Properties';
+
+        result.allowed =
+            employee.Can_Manage_Properties === true;
+
+        result.reason =
+            result.allowed
+                ? 'Property management permission verified'
+                : 'Employee does not have permission to manage properties';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // MAINTENANCE
+    // ------------------------------------------
+
+    if (table === 'MAINTENANCE') {
+
+        result.required_permission =
+            'Can_Manage_Maintenance';
+
+        result.allowed =
+            employee.Can_Manage_Maintenance === true;
+
+        result.reason =
+            result.allowed
+                ? 'Maintenance management permission verified'
+                : 'Employee does not have permission to manage maintenance';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // الحقول المالية
+    // ------------------------------------------
+
+    const tablePolicy =
+        AI_SECURITY_POLICY[table];
+
+    const financialFields =
+        tablePolicy?.financialFields || [];
+
+    const containsFinancialChange =
+        changedFields.some(
+            field =>
+                financialFields.includes(field)
+        );
+
+    if (containsFinancialChange) {
+
+        result.required_permission =
+            'Can_View_Financial_Data';
+
+        result.allowed =
+            employee.Can_View_Financial_Data === true;
+
+        result.reason =
+            result.allowed
+                ? 'Financial permission verified'
+                : 'Employee does not have permission for financial operations';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // العمليات العادية
+    // ------------------------------------------
+
+    result.allowed = true;
+    result.reason =
+        'No additional table permission is required';
+
+    return result;
+}
 
 
 

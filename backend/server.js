@@ -496,6 +496,47 @@ const CUSTOMER_AI_POLICY = {
 };
 
 
+const CUSTOMER_ALLOWED_FIELDS = {
+
+    REQUIREMENTS: [
+        'Transaction_Type',
+        'Property_Type',
+        'Preferred_Areas',
+        'Min_Budget',
+        'Max_Budget',
+        'Currency',
+        'Min_Bedrooms',
+        'Max_Bedrooms',
+        'Min_Bathrooms',
+        'Min_Area_Sqm',
+        'Max_Area_Sqm',
+        'Furnished_Preference',
+        'Payment_Method',
+        'Financing_Required',
+        'Move_In_Date',
+        'Rental_Duration',
+        'Priority',
+        'Notes',
+        'Next_Followup_At'
+    ],
+
+    DEALS: [
+        'Next_Action',
+        'Next_Action_Date'
+    ],
+
+    VIEWINGS: [
+        'Client_Attended',
+        'Client_Feedback',
+        'Interest_Level',
+        'Objections',
+        'Next_Action',
+        'Next_Action_Date',
+        'Notes'
+    ]
+};
+
+
 async function evaluateCustomerPermission(
     authorizationResult,
     securityResult,
@@ -642,6 +683,42 @@ async function evaluateCustomerPermission(
     }
 
 
+
+// ------------------------------------------
+// التحقق من الحقول التي يريد العميل تعديلها
+// ------------------------------------------
+
+const changedFields =
+    Object.keys(
+        securityResult.validated_changes || {}
+    );
+
+const allowedFields =
+    CUSTOMER_ALLOWED_FIELDS[table] || [];
+
+
+const rejectedFields =
+    changedFields.filter(
+        field =>
+            !allowedFields.includes(field)
+    );
+
+
+if (rejectedFields.length > 0) {
+
+    result.reason =
+        'Customer attempted to modify restricted fields';
+
+    result.rejected_fields =
+        rejectedFields;
+
+    return result;
+}
+
+
+
+
+
     // ------------------------------------------
     // نجحت صلاحية العميل
     // ------------------------------------------
@@ -660,12 +737,13 @@ function evaluateEmployeePermission(
     securityResult
 ) {
 
-    const result = {
-        allowed: false,
-        reason: '',
-        required_permissions: [],
-        missing_permissions: []
-    };
+const result = {
+    allowed: false,
+    reason: '',
+    table: '',
+    record_id: '',
+    rejected_fields: []
+};
 
 
     // ------------------------------------------

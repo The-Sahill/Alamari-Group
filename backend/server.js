@@ -2549,6 +2549,10 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 // Authorization Layer
 // ==================================================
 
+// ==================================================
+// Authorization Layer
+// ==================================================
+
 let authorizationResult = null;
 let permissionResult = null;
 
@@ -2557,12 +2561,34 @@ const employeeId =
         action.Employee_ID || ''
     ).trim();
 
+const personId =
+    String(
+        action.Person_ID || ''
+    ).trim();
+
 
 // --------------------------------------------------
-// إذا كان الطلب مرتبطًا بموظف
+// منع الهوية المزدوجة
 // --------------------------------------------------
 
-if (employeeId) {
+if (employeeId && personId) {
+
+    securityResult.allowed = false;
+    securityResult.execution_allowed_now = false;
+    securityResult.reason =
+        'AI action cannot contain both Employee_ID and Person_ID';
+
+    console.log(
+        'Execution blocked: ambiguous requester identity'
+    );
+}
+
+
+// --------------------------------------------------
+// مسار الموظف
+// --------------------------------------------------
+
+else if (employeeId) {
 
     authorizationResult =
         await authorizeAIAction(action);
@@ -2573,7 +2599,6 @@ if (employeeId) {
     );
 
 
-    // فشل التحقق من هوية/صلاحية استخدام AI
     if (!authorizationResult.authorized) {
 
         securityResult.allowed = false;
@@ -2587,10 +2612,6 @@ if (employeeId) {
         );
 
     } else {
-
-        // ------------------------------------------
-        // فحص صلاحيات الجدول والحقول
-        // ------------------------------------------
 
         permissionResult =
             evaluateEmployeePermission(
@@ -2608,7 +2629,6 @@ if (employeeId) {
 
             securityResult.allowed = false;
             securityResult.execution_allowed_now = false;
-
             securityResult.reason =
                 permissionResult.reason;
 
@@ -2624,12 +2644,91 @@ if (employeeId) {
             );
         }
     }
+}
 
-} else {
+
+// --------------------------------------------------
+// مسار العميل
+// --------------------------------------------------
+
+else if (personId) {
+
+    authorizationResult =
+        await authorizeCustomerAIAction(action);
 
     console.log(
-        'No Employee_ID - employee authorization layer skipped'
+        'Customer Authorization Decision:',
+        authorizationResult
     );
+
+
+    if (!authorizationResult.authorized) {
+
+        securityResult.allowed = false;
+        securityResult.execution_allowed_now = false;
+        securityResult.reason =
+            authorizationResult.reason;
+
+        console.log(
+            'Execution blocked by Customer Authorization:',
+            authorizationResult.reason
+        );
+
+    } else {
+
+        permissionResult =
+            await evaluateCustomerPermission(
+                authorizationResult,
+                securityResult,
+                aiResult
+            );
+
+        console.log(
+            'Customer Permission Decision:',
+            permissionResult
+        );
+
+
+        if (!permissionResult.allowed) {
+
+            securityResult.allowed = false;
+            securityResult.execution_allowed_now = false;
+            securityResult.reason =
+                permissionResult.reason;
+
+            console.log(
+                'Execution blocked by Customer Permissions:',
+                {
+                    table:
+                        permissionResult.table,
+
+                    recordId:
+                        permissionResult.record_id,
+
+                    rejectedFields:
+                        permissionResult.rejected_fields
+                }
+            );
+        }
+    }
+}
+
+
+// --------------------------------------------------
+// لا توجد هوية يمكن التحقق منها
+// --------------------------------------------------
+
+else {
+
+    securityResult.allowed = false;
+    securityResult.execution_allowed_now = false;
+    securityResult.reason =
+        'Verified requester identity is required';
+
+    console.log(
+        'Execution blocked: no Employee_ID or Person_ID'
+    );
+
 }
 
 

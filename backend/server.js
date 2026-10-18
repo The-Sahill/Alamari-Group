@@ -473,6 +473,188 @@ async function authorizeCustomerAIAction(action) {
             'Customer identity verified'
     };
 }
+
+const CUSTOMER_AI_POLICY = {
+
+    // طلب العميل نفسه
+    REQUIREMENTS: {
+        ownershipField: 'Person_ID',
+        allowedOperations: ['update']
+    },
+
+    // صفقة مرتبطة بالعميل
+    DEALS: {
+        ownershipField: 'Person_ID',
+        allowedOperations: ['update']
+    },
+
+    // معاينة مرتبطة بالعميل
+    VIEWINGS: {
+        ownershipField: 'Person_ID',
+        allowedOperations: ['update']
+    }
+};
+
+
+async function evaluateCustomerPermission(
+    authorizationResult,
+    securityResult,
+    aiResult
+) {
+
+    const result = {
+        allowed: false,
+        reason: '',
+        table: '',
+        record_id: ''
+    };
+
+
+    // ------------------------------------------
+    // فشل التحقق من هوية العميل
+    // ------------------------------------------
+
+    if (!authorizationResult.authorized) {
+
+        result.reason =
+            authorizationResult.reason;
+
+        return result;
+    }
+
+
+    const table =
+        String(
+            securityResult.target_table || ''
+        )
+        .trim()
+        .toUpperCase();
+
+    const operation =
+        String(
+            securityResult.operation || ''
+        )
+        .trim()
+        .toLowerCase();
+
+    const recordId =
+        String(
+            aiResult.target_record_id || ''
+        ).trim();
+
+
+    result.table = table;
+    result.record_id = recordId;
+
+
+    // ------------------------------------------
+    // هل الجدول مسموح للعملاء أصلًا؟
+    // ------------------------------------------
+
+    const policy =
+        CUSTOMER_AI_POLICY[table];
+
+    if (!policy) {
+
+        result.reason =
+            'Customers are not allowed to modify this table';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // هل نوع العملية مسموح؟
+    // ------------------------------------------
+
+    if (
+        !policy.allowedOperations.includes(
+            operation
+        )
+    ) {
+
+        result.reason =
+            'Operation is not allowed for customers';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // يجب وجود Record ID
+    // ------------------------------------------
+
+    if (!recordId) {
+
+        result.reason =
+            'Target record ID is required';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // قراءة السجل الحقيقي
+    // ------------------------------------------
+
+    const targetRecord =
+        await getRecordById(
+            table,
+            recordId
+        );
+
+
+    if (!targetRecord) {
+
+        result.reason =
+            'Target record was not found';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // التحقق من ملكية السجل
+    // ------------------------------------------
+
+    const recordPersonId =
+        String(
+            targetRecord.data[
+                policy.ownershipField
+            ] || ''
+        ).trim();
+
+    const authorizedPersonId =
+        String(
+            authorizationResult.person_id || ''
+        ).trim();
+
+
+    if (
+        !recordPersonId ||
+        recordPersonId !== authorizedPersonId
+    ) {
+
+        result.reason =
+            'Customer does not own the target record';
+
+        return result;
+    }
+
+
+    // ------------------------------------------
+    // نجحت صلاحية العميل
+    // ------------------------------------------
+
+    result.allowed = true;
+
+    result.reason =
+        'Customer owns the target record and operation is allowed';
+
+    return result;
+}
+
+
 function evaluateEmployeePermission(
     authorizationResult,
     securityResult

@@ -2444,6 +2444,63 @@ async function authorizeAIAction(action) {
         employeeRecord.data;
 
 
+
+
+
+        // ------------------------------------------
+// التحقق من هوية مستخدم AppSheet
+// ------------------------------------------
+
+const channel =
+    String(action.Channel || '')
+    .trim()
+    .toLowerCase();
+
+const requesterEmail =
+    String(action.Requester_Email || '')
+    .trim()
+    .toLowerCase();
+
+const employeeAppSheetEmail =
+    String(employee.AppSheet_Email || '')
+    .trim()
+    .toLowerCase();
+
+
+if (channel === 'appsheet') {
+
+    if (!requesterEmail) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: employeeId,
+            employee: null,
+            reason:
+                'Requester_Email is required for AppSheet commands'
+        };
+    }
+
+
+    if (
+        !employeeAppSheetEmail ||
+        requesterEmail !== employeeAppSheetEmail
+    ) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: employeeId,
+            employee: null,
+            reason:
+                'Requester_Email does not match employee AppSheet_Email'
+        };
+    }
+}
+
+
+
+
     // ------------------------------------------
     // تحويل Yes/No إلى Boolean
     // ------------------------------------------

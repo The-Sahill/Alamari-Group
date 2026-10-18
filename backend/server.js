@@ -2501,6 +2501,76 @@ if (channel === 'appsheet') {
 
 
 
+
+// ------------------------------------------
+// التحقق من هوية الموظف عبر WhatsApp
+// ------------------------------------------
+
+if (channel === 'واتساب') {
+
+    const normalizePhone = value =>
+        String(value || '')
+        .replace(/[^\d]/g, '')
+        .trim();
+
+    const requesterWhatsApp =
+        normalizePhone(
+            action.WhatsApp_Number
+        );
+
+    const employeeWhatsApp =
+        normalizePhone(
+            employee.WhatsApp_Number
+        );
+
+    const employeeMobile =
+        normalizePhone(
+            employee.Mobile
+        );
+
+
+    // يجب أن يصل رقم المرسل
+    if (!requesterWhatsApp) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: employeeId,
+            employee: null,
+            reason:
+                'WhatsApp_Number is required for WhatsApp employee commands'
+        };
+    }
+
+
+    // يجب أن يطابق رقمًا مسجلًا للموظف
+    const phoneMatches =
+        (
+            employeeWhatsApp &&
+            requesterWhatsApp === employeeWhatsApp
+        ) ||
+        (
+            employeeMobile &&
+            requesterWhatsApp === employeeMobile
+        );
+
+
+    if (!phoneMatches) {
+
+        return {
+            authorized: false,
+            user_type: userType,
+            employee_id: employeeId,
+            employee: null,
+            reason:
+                'WhatsApp_Number does not match employee record'
+        };
+    }
+}
+
+
+
+
     // ------------------------------------------
     // تحويل Yes/No إلى Boolean
     // ------------------------------------------

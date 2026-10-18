@@ -358,168 +358,121 @@ async function getRecordById(tableName, recordId) {
     };
 }
 
-async function authorizeAIAction(action) {
+async function authorizeCustomerAIAction(action) {
 
-    const employeeId =
+    const personId =
         String(
-            action.Employee_ID || ''
+            action.Person_ID || ''
         ).trim();
 
-    const userType =
+    const whatsappNumber =
         String(
-            action.User_Type || ''
+            action.WhatsApp_Number || ''
         ).trim();
 
 
     // ------------------------------------------
-    // لا يوجد موظف مرتبط بالطلب
+    // يجب وجود Person_ID
     // ------------------------------------------
 
-    if (!employeeId) {
+    if (!personId) {
 
         return {
             authorized: false,
-            user_type: userType,
-            employee_id: '',
-            employee: null,
+            person_id: '',
             reason:
-                'Employee_ID is required for AI command execution'
+                'Person_ID is required for customer AI commands'
         };
     }
 
 
     // ------------------------------------------
-    // قراءة الموظف من المصدر الحقيقي
+    // قراءة الشخص من المصدر الحقيقي
     // ------------------------------------------
 
-    const employeeRecord =
+    const personRecord =
         await getRecordById(
-            'EMPLOYEES',
-            employeeId
+            'PEOPLE',
+            personId
         );
 
 
-    if (!employeeRecord) {
+    if (!personRecord) {
 
         return {
             authorized: false,
-            user_type: userType,
-            employee_id: employeeId,
-            employee: null,
+            person_id: personId,
             reason:
-                'Employee record was not found'
+                'Person record was not found'
         };
     }
 
 
-    const employee =
-        employeeRecord.data;
+    const person =
+        personRecord.data;
 
 
     // ------------------------------------------
-    // تحويل قيم Yes/No إلى Boolean
+    // التحقق من رقم WhatsApp عند توفره
     // ------------------------------------------
 
-    const isTrue = value => {
+    if (whatsappNumber) {
 
-        const normalized =
+        const normalizePhone = value =>
             String(value || '')
-            .trim()
-            .toLowerCase();
+            .replace(/[^\d+]/g, '')
+            .trim();
 
-        return [
-            'true',
-            'yes',
-            '1',
-            'نعم'
-        ].includes(normalized);
-    };
+        const incomingPhone =
+            normalizePhone(whatsappNumber);
+
+        const registeredWhatsApp =
+            normalizePhone(
+                person.WhatsApp_Number
+            );
+
+        const registeredMobile =
+            normalizePhone(
+                person.Primary_Mobile
+            );
 
 
-    // ------------------------------------------
-    // الموظف يجب أن يكون فعالًا
-    // ------------------------------------------
+        const phoneMatches =
+            incomingPhone &&
+            (
+                incomingPhone === registeredWhatsApp ||
+                incomingPhone === registeredMobile
+            );
 
-    if (!isTrue(employee.Active)) {
 
-        return {
-            authorized: false,
-            user_type: userType,
-            employee_id: employeeId,
-            employee: null,
-            reason:
-                'Employee is not active'
-        };
+        if (!phoneMatches) {
+
+            return {
+                authorized: false,
+                person_id: personId,
+                reason:
+                    'Customer phone number does not match person record'
+            };
+        }
     }
 
-
-    // ------------------------------------------
-    // يجب أن يمتلك صلاحية استخدام أوامر AI
-    // ------------------------------------------
-
-    if (!isTrue(employee.Can_Use_AI_Commands)) {
-
-        return {
-            authorized: false,
-            user_type: userType,
-            employee_id: employeeId,
-            employee: null,
-            reason:
-                'Employee is not allowed to use AI commands'
-        };
-    }
-
-
-    // ------------------------------------------
-    // نجح التحقق الأساسي
-    // ------------------------------------------
 
     return {
         authorized: true,
-        user_type: userType,
-        employee_id: employeeId,
+        person_id: personId,
 
-        employee: {
-            Employee_ID:
-                employee.Employee_ID,
+        person: {
+            Person_ID:
+                person.Person_ID,
 
-            Role:
-                employee.Role,
-
-            Department:
-                employee.Department,
-
-            Can_View_Financial_Data:
-                isTrue(
-                    employee.Can_View_Financial_Data
-                ),
-
-            Can_Manage_Properties:
-                isTrue(
-                    employee.Can_Manage_Properties
-                ),
-
-            Can_Manage_Leases:
-                isTrue(
-                    employee.Can_Manage_Leases
-                ),
-
-            Can_Manage_Maintenance:
-                isTrue(
-                    employee.Can_Manage_Maintenance
-                ),
-
-            Can_Manage_Employees:
-                isTrue(
-                    employee.Can_Manage_Employees
-                )
+            Status:
+                person.Status
         },
 
         reason:
-            'Employee identity and AI permission verified'
+            'Customer identity verified'
     };
 }
-
 function evaluateEmployeePermission(
     authorizationResult,
     securityResult

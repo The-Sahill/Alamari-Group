@@ -416,45 +416,73 @@ async function authorizeCustomerAIAction(action) {
     // التحقق من رقم WhatsApp عند توفره
     // ------------------------------------------
 
-    if (whatsappNumber) {
+  // ------------------------------------------
+// التحقق من هوية العميل عبر WhatsApp
+// ------------------------------------------
 
-        const normalizePhone = value =>
-            String(value || '')
-            .replace(/[^\d+]/g, '')
-            .trim();
+const channel =
+    String(action.Channel || '')
+    .trim()
+    .toLowerCase();
 
-        const incomingPhone =
-            normalizePhone(whatsappNumber);
-
-        const registeredWhatsApp =
-            normalizePhone(
-                person.WhatsApp_Number
-            );
-
-        const registeredMobile =
-            normalizePhone(
-                person.Primary_Mobile
-            );
+const normalizePhone = value =>
+    String(value || '')
+    .replace(/[^\d]/g, '')
+    .trim();
 
 
-        const phoneMatches =
-            incomingPhone &&
-            (
-                incomingPhone === registeredWhatsApp ||
-                incomingPhone === registeredMobile
-            );
+if (channel === 'واتساب') {
+
+    const incomingPhone =
+        normalizePhone(
+            action.WhatsApp_Number
+        );
+
+    const registeredWhatsApp =
+        normalizePhone(
+            person.WhatsApp_Number
+        );
+
+    const registeredMobile =
+        normalizePhone(
+            person.Primary_Mobile
+        );
 
 
-        if (!phoneMatches) {
+    // يجب وجود رقم المرسل
+    if (!incomingPhone) {
 
-            return {
-                authorized: false,
-                person_id: personId,
-                reason:
-                    'Customer phone number does not match person record'
-            };
-        }
+        return {
+            authorized: false,
+            person_id: personId,
+            reason:
+                'WhatsApp_Number is required for WhatsApp customer commands'
+        };
     }
+
+
+    // يجب أن يطابق رقم العميل المسجل
+    const phoneMatches =
+        (
+            registeredWhatsApp &&
+            incomingPhone === registeredWhatsApp
+        ) ||
+        (
+            registeredMobile &&
+            incomingPhone === registeredMobile
+        );
+
+
+    if (!phoneMatches) {
+
+        return {
+            authorized: false,
+            person_id: personId,
+            reason:
+                'WhatsApp_Number does not match customer record'
+        };
+    }
+}
 
 
     return {

@@ -1109,6 +1109,168 @@ async function updateRecordById(
 
 
 
+
+async function writeAuditLogs({
+    action,
+    executionResult,
+    authorizationResult
+}) {
+
+    if (
+        !executionResult ||
+        !executionResult.oldValues ||
+        !executionResult.newValues
+    ) {
+        return;
+    }
+
+
+    const sheetName =
+        'سجل التدقيق';
+
+    const changedFields =
+        Object.keys(
+            executionResult.newValues
+        );
+
+
+    if (changedFields.length === 0) {
+        return;
+    }
+
+
+    // ------------------------------------------
+    // تحديد منفذ العملية
+    // ------------------------------------------
+
+    let performedByType = '';
+    let performedById = '';
+
+    if (action.Employee_ID) {
+
+        performedByType = 'موظف';
+        performedById =
+            String(action.Employee_ID);
+
+    } else if (action.Person_ID) {
+
+        performedByType = 'عميل';
+        performedById =
+            String(action.Person_ID);
+    }
+
+
+    // ------------------------------------------
+    // إنشاء سجل لكل حقل تغير
+    // ------------------------------------------
+
+    const rows =
+        changedFields.map(field => [
+
+            // Audit_ID
+            `audit-${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 10)}`,
+
+            // Table_Name
+            String(
+                executionResult.table || ''
+            ),
+
+            // Record_ID
+            String(
+                executionResult.recordId || ''
+            ),
+
+            // Action_Type
+            'تعديل',
+
+            // Field_Name
+            field,
+
+            // Old_Value
+            String(
+                executionResult.oldValues[field] ?? ''
+            ),
+
+            // New_Value
+            String(
+                executionResult.newValues[field] ?? ''
+            ),
+
+            // Performed_By_Type
+            performedByType,
+
+            // Performed_By_ID
+            performedById,
+
+            // Channel
+            String(
+                action.Channel || ''
+            ),
+
+            // AI_Action_ID
+            String(
+                action.AI_Action_ID || ''
+            ),
+
+            // Date_Time
+            new Date().toISOString(),
+
+            // Device_Info
+            '',
+
+            // Notes
+            'AI Generic Update Engine'
+        ]);
+
+
+    // ------------------------------------------
+    // إضافة السجلات إلى Google Sheet
+    // ------------------------------------------
+
+    await sheets.spreadsheets.values.append({
+
+        spreadsheetId:
+            SPREADSHEET_ID,
+
+        range:
+            `'${sheetName}'!A:N`,
+
+        valueInputOption:
+            'USER_ENTERED',
+
+        insertDataOption:
+            'INSERT_ROWS',
+
+        requestBody: {
+            values: rows
+        }
+    });
+
+
+    console.log(
+        'Audit Log written:',
+        {
+            AI_Action_ID:
+                action.AI_Action_ID,
+
+            table:
+                executionResult.table,
+
+            recordId:
+                executionResult.recordId,
+
+            fields:
+                changedFields
+        }
+    );
+}
+
+
+
+
+
 // ======================================================
 // AI Action Execution Tracking
 // ======================================================

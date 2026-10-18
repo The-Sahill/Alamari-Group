@@ -737,46 +737,50 @@ function evaluateEmployeePermission(
     securityResult
 ) {
 
-const result = {
-    allowed: false,
-    reason: '',
-    table: '',
-    record_id: '',
-    rejected_fields: []
-};
+    const result = {
+        allowed: false,
+        reason: '',
+        required_permissions: [],
+        missing_permissions: []
+    };
 
 
     // ------------------------------------------
-    // التحقق الأساسي من هوية الموظف
+    // التحقق الأساسي من الموظف
     // ------------------------------------------
 
-    if (!authorizationResult.authorized) {
+    if (
+        !authorizationResult ||
+        authorizationResult.authorized !== true
+    ) {
 
         result.reason =
-            authorizationResult.reason;
+            authorizationResult?.reason ||
+            'Employee authorization failed';
 
         return result;
     }
 
 
     const employee =
-        authorizationResult.employee;
+        authorizationResult.employee || {};
 
     const table =
         String(
-            securityResult.target_table || ''
+            securityResult?.target_table || ''
         )
         .trim()
         .toUpperCase();
 
+    const validatedChanges =
+        securityResult?.validated_changes || {};
+
     const changedFields =
-        Object.keys(
-            securityResult.validated_changes || {}
-        );
+        Object.keys(validatedChanges);
 
 
     // ------------------------------------------
-    // تحديد صلاحيات الجدول المطلوبة
+    // صلاحيات الجدول
     // ------------------------------------------
 
     if (table === 'EMPLOYEES') {
@@ -807,14 +811,19 @@ const result = {
 
 
     // ------------------------------------------
-    // هل العملية تحتوي حقولًا مالية؟
+    // فحص الحقول المالية
     // ------------------------------------------
 
     const tablePolicy =
-        AI_SECURITY_POLICY[table];
+        AI_SECURITY_POLICY?.[table] || {};
 
     const financialFields =
-        tablePolicy?.financialFields || [];
+        Array.isArray(
+            tablePolicy.financialFields
+        )
+            ? tablePolicy.financialFields
+            : [];
+
 
     const containsFinancialChange =
         changedFields.some(
@@ -832,7 +841,7 @@ const result = {
 
 
     // ------------------------------------------
-    // إزالة أي تكرار
+    // إزالة التكرار
     // ------------------------------------------
 
     result.required_permissions =

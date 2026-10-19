@@ -3925,56 +3925,87 @@ console.log(
 
 
 
-    } catch (error) {
+   } catch (error) {
 
-        console.error(
-            'AppSheet AI Action error:',
-            error
-        );
+    console.error(
+        'AppSheet AI Action error:',
+        error
+    );
 
-        // ------------------------------------------
-        // تسجيل الخطأ التقني في AI Action
-        // ------------------------------------------
+    // ------------------------------------------
+    // تسجيل الخطأ التقني في AI Action
+    // ------------------------------------------
 
-        try {
+    try {
 
-            const failedActionId =
-                req.body?.AI_Action_ID;
+        const failedActionId =
+            req.body?.AI_Action_ID;
 
-            if (failedActionId) {
+        if (failedActionId) {
 
-                await updateAIActionExecution(
-                    failedActionId,
-                    'فشل',
-                    '',
-                    String(
-                        error?.message ||
-                        'Unknown execution error'
-                    )
-                );
+            await updateAIActionExecution(
+                failedActionId,
+                'فشل',
+                '',
+                String(
+                    error?.message ||
+                    'Unknown execution error'
+                )
+            );
 
-                console.log(
-                    'AI Action marked as failed:',
-                    failedActionId
-                );
-            }
-
-        } catch (trackingError) {
-
-            // إذا تعذر تسجيل حالة الفشل،
-            // نحافظ على الخطأ الأصلي ولا نخفيه
-            console.error(
-                'Failed to record AI Action failure:',
-                trackingError
+            console.log(
+                'AI Action marked as failed:',
+                failedActionId
             );
         }
 
+    } catch (trackingError) {
 
-        return res.status(500).json({
-            success: false,
-            error: 'Internal server error'
-        });
+        // إذا تعذر تسجيل حالة الفشل،
+        // نحافظ على الخطأ الأصلي ولا نخفيه
+        console.error(
+            'Failed to record AI Action failure:',
+            trackingError
+        );
     }
+
+
+    // ------------------------------------------
+    // تسجيل الخطأ التقني في سجل التدقيق
+    // ------------------------------------------
+
+    try {
+
+        await writeFailedAuditLog({
+            action: req.body || {},
+            error,
+            authorizationResult:
+                typeof authorizationResult !== 'undefined'
+                    ? authorizationResult
+                    : null
+        });
+
+        console.log(
+            'Failed action audit logging completed:',
+            req.body?.AI_Action_ID || ''
+        );
+
+    } catch (auditError) {
+
+        // فشل سجل التدقيق لا يجب أن يخفي
+        // الخطأ الأصلي للطلب
+        console.error(
+            'Failed to write technical Audit Log:',
+            auditError
+        );
+    }
+
+
+    return res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+    });
+}
 });
 
 

@@ -416,73 +416,73 @@ async function authorizeCustomerAIAction(action) {
     // التحقق من رقم WhatsApp عند توفره
     // ------------------------------------------
 
-  // ------------------------------------------
-// التحقق من هوية العميل عبر WhatsApp
-// ------------------------------------------
+    // ------------------------------------------
+    // التحقق من هوية العميل عبر WhatsApp
+    // ------------------------------------------
 
-const channel =
-    String(action.Channel || '')
-    .trim()
-    .toLowerCase();
+    const channel =
+        String(action.Channel || '')
+            .trim()
+            .toLowerCase();
 
-const normalizePhone = value =>
-    String(value || '')
-    .replace(/[^\d]/g, '')
-    .trim();
-
-
-if (channel === 'واتساب') {
-
-    const incomingPhone =
-        normalizePhone(
-            action.WhatsApp_Number
-        );
-
-    const registeredWhatsApp =
-        normalizePhone(
-            person.WhatsApp_Number
-        );
-
-    const registeredMobile =
-        normalizePhone(
-            person.Primary_Mobile
-        );
+    const normalizePhone = value =>
+        String(value || '')
+            .replace(/[^\d]/g, '')
+            .trim();
 
 
-    // يجب وجود رقم المرسل
-    if (!incomingPhone) {
+    if (channel === 'واتساب') {
 
-        return {
-            authorized: false,
-            person_id: personId,
-            reason:
-                'WhatsApp_Number is required for WhatsApp customer commands'
-        };
+        const incomingPhone =
+            normalizePhone(
+                action.WhatsApp_Number
+            );
+
+        const registeredWhatsApp =
+            normalizePhone(
+                person.WhatsApp_Number
+            );
+
+        const registeredMobile =
+            normalizePhone(
+                person.Primary_Mobile
+            );
+
+
+        // يجب وجود رقم المرسل
+        if (!incomingPhone) {
+
+            return {
+                authorized: false,
+                person_id: personId,
+                reason:
+                    'WhatsApp_Number is required for WhatsApp customer commands'
+            };
+        }
+
+
+        // يجب أن يطابق رقم العميل المسجل
+        const phoneMatches =
+            (
+                registeredWhatsApp &&
+                incomingPhone === registeredWhatsApp
+            ) ||
+            (
+                registeredMobile &&
+                incomingPhone === registeredMobile
+            );
+
+
+        if (!phoneMatches) {
+
+            return {
+                authorized: false,
+                person_id: personId,
+                reason:
+                    'WhatsApp_Number does not match customer record'
+            };
+        }
     }
-
-
-    // يجب أن يطابق رقم العميل المسجل
-    const phoneMatches =
-        (
-            registeredWhatsApp &&
-            incomingPhone === registeredWhatsApp
-        ) ||
-        (
-            registeredMobile &&
-            incomingPhone === registeredMobile
-        );
-
-
-    if (!phoneMatches) {
-
-        return {
-            authorized: false,
-            person_id: personId,
-            reason:
-                'WhatsApp_Number does not match customer record'
-        };
-    }
-}
 
 
     return {
@@ -596,15 +596,15 @@ async function evaluateCustomerPermission(
         String(
             securityResult.target_table || ''
         )
-        .trim()
-        .toUpperCase();
+            .trim()
+            .toUpperCase();
 
     const operation =
         String(
             securityResult.operation || ''
         )
-        .trim()
-        .toLowerCase();
+            .trim()
+            .toLowerCase();
 
     const recordId =
         String(
@@ -689,7 +689,7 @@ async function evaluateCustomerPermission(
     const recordPersonId =
         String(
             targetRecord.data[
-                policy.ownershipField
+            policy.ownershipField
             ] || ''
         ).trim();
 
@@ -712,36 +712,36 @@ async function evaluateCustomerPermission(
 
 
 
-// ------------------------------------------
-// التحقق من الحقول التي يريد العميل تعديلها
-// ------------------------------------------
+    // ------------------------------------------
+    // التحقق من الحقول التي يريد العميل تعديلها
+    // ------------------------------------------
 
-const changedFields =
-    Object.keys(
-        securityResult.validated_changes || {}
-    );
+    const changedFields =
+        Object.keys(
+            securityResult.validated_changes || {}
+        );
 
-const allowedFields =
-    CUSTOMER_ALLOWED_FIELDS[table] || [];
-
-
-const rejectedFields =
-    changedFields.filter(
-        field =>
-            !allowedFields.includes(field)
-    );
+    const allowedFields =
+        CUSTOMER_ALLOWED_FIELDS[table] || [];
 
 
-if (rejectedFields.length > 0) {
+    const rejectedFields =
+        changedFields.filter(
+            field =>
+                !allowedFields.includes(field)
+        );
 
-    result.reason =
-        'Customer attempted to modify restricted fields';
 
-    result.rejected_fields =
-        rejectedFields;
+    if (rejectedFields.length > 0) {
 
-    return result;
-}
+        result.reason =
+            'Customer attempted to modify restricted fields';
+
+        result.rejected_fields =
+            rejectedFields;
+
+        return result;
+    }
 
 
 
@@ -797,8 +797,8 @@ function evaluateEmployeePermission(
         String(
             securityResult?.target_table || ''
         )
-        .trim()
-        .toUpperCase();
+            .trim()
+            .toUpperCase();
 
     const validatedChanges =
         securityResult?.validated_changes || {};
@@ -1912,8 +1912,8 @@ async function analyzeAppSheetAction(action) {
             String(
                 action.Target_Table || ''
             )
-            .trim()
-            .toUpperCase();
+                .trim()
+                .toUpperCase();
 
         if (requestedTable) {
 
@@ -2331,7 +2331,7 @@ const AI_SECURITY_POLICY = {
             'Created_At',
             'Updated_At'
         ],
-            financialFields: [
+        financialFields: [
             'Service_Fee_Fixed',
             'Service_Fee_Rate'
         ],
@@ -2349,115 +2349,115 @@ const AI_SECURITY_POLICY = {
             'Created_At',
             'Updated_At'
         ],
-    // الحقول المالية للوحدات
-financialFields: [
-    'Monthly_Service_Fee',
-    'sale_price_per_sqm',
-    'Sale_Price',
-    'Daily_Rent',
-    'Rental_Price_Monthly',
-    'Three_Month_Rent',
-    'Six_Month_Ren',
-    'Annual_Rent',
-    'Currency'
-],
+        // الحقول المالية للوحدات
+        financialFields: [
+            'Monthly_Service_Fee',
+            'sale_price_per_sqm',
+            'Sale_Price',
+            'Daily_Rent',
+            'Rental_Price_Monthly',
+            'Three_Month_Rent',
+            'Six_Month_Ren',
+            'Annual_Rent',
+            'Currency'
+        ],
         sensitiveStatuses: [],
         allowedStages: [],
         allowedStatuses: []
     },
 
-   PEOPLE: {
-    keyField: 'Person_ID',
+    PEOPLE: {
+        keyField: 'Person_ID',
 
-    allowedWritableFields: [],
+        allowedWritableFields: [],
 
-    protectedFields: [
-        '_RowNumber',
-        'Person_ID',
-        'Created_At',
-        'Updated_At'
-    ],
+        protectedFields: [
+            '_RowNumber',
+            'Person_ID',
+            'Created_At',
+            'Updated_At'
+        ],
 
-    financialFields: [],
+        financialFields: [],
 
-    sensitiveStatuses: [],
-    allowedStages: [],
-    allowedStatuses: []
-},
-
-  protectedFields: [
-    '_RowNumber',
-    'Employee_ID',
-    'Created_At',
-    'Updated_At',
-
-    // الهوية والصلاحيات الإدارية
-    'Role',
-    'Manager_ID',
-    'Department',
-    'Job_Title',
-    'Branch',
-    'Active',
-    'AppSheet_Email',
-
-    // صلاحيات النظام
-    'Can_View_All_Leads',
-    'Can_Reassign_Leads',
-    'Can_View_Financial_Data',
-    'Can_Manage_Properties',
-    'Can_Manage_Leases',
-    'Can_Manage_Maintenance',
-    'Can_View_AI_Actions',
-    'Can_View_Audit_Log',
-    'Can_Manage_System_Settings',
-    'Can_Manage_Lookups',
-    'Can_Manage_Ownerships',
-    'Can_Manage_Employees',
-    'Can_Use_AI_Commands'
-],
-
-
-REQUIREMENTS: {
-    keyField: 'Requirement_ID',
-
-    allowedWritableFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
 
     protectedFields: [
         '_RowNumber',
-        'Requirement_ID',
+        'Employee_ID',
         'Created_At',
-        'Updated_At'
+        'Updated_At',
+
+        // الهوية والصلاحيات الإدارية
+        'Role',
+        'Manager_ID',
+        'Department',
+        'Job_Title',
+        'Branch',
+        'Active',
+        'AppSheet_Email',
+
+        // صلاحيات النظام
+        'Can_View_All_Leads',
+        'Can_Reassign_Leads',
+        'Can_View_Financial_Data',
+        'Can_Manage_Properties',
+        'Can_Manage_Leases',
+        'Can_Manage_Maintenance',
+        'Can_View_AI_Actions',
+        'Can_View_Audit_Log',
+        'Can_Manage_System_Settings',
+        'Can_Manage_Lookups',
+        'Can_Manage_Ownerships',
+        'Can_Manage_Employees',
+        'Can_Use_AI_Commands'
     ],
 
-    financialFields: [
-        'Min_Budget',
-        'Max_Budget',
-        'Currency'
-    ],
 
-    sensitiveStatuses: [],
-    allowedStages: [],
-    allowedStatuses: []
-},
+    REQUIREMENTS: {
+        keyField: 'Requirement_ID',
 
-VIEWINGS: {
-    keyField: 'Viewing_ID',
+        allowedWritableFields: [],
 
-    allowedWritableFields: [],
+        protectedFields: [
+            '_RowNumber',
+            'Requirement_ID',
+            'Created_At',
+            'Updated_At'
+        ],
 
-    protectedFields: [
-        '_RowNumber',
-        'Viewing_ID',
-        'Created_At',
-        'Updated_At'
-    ],
+        financialFields: [
+            'Min_Budget',
+            'Max_Budget',
+            'Currency'
+        ],
 
-    financialFields: [],
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
 
-    sensitiveStatuses: [],
-    allowedStages: [],
-    allowedStatuses: []
-},
+    VIEWINGS: {
+        keyField: 'Viewing_ID',
+
+        allowedWritableFields: [],
+
+        protectedFields: [
+            '_RowNumber',
+            'Viewing_ID',
+            'Created_At',
+            'Updated_At'
+        ],
+
+        financialFields: [],
+
+        sensitiveStatuses: [],
+        allowedStages: [],
+        allowedStatuses: []
+    },
 
     TASKS: {
         keyField: 'Task_ID',
@@ -2605,257 +2605,257 @@ async function evaluateAISecurity(action, aiResult) {
     // ==================================================
 
     // ==================================================
-// 6. CREATE
-// ==================================================
+    // 6. CREATE
+    // ==================================================
 
-if (operation === 'create') {
+    if (operation === 'create') {
 
-    const createEntries =
-        Object.entries(changes);
-
-
-    // ------------------------------------------
-    // يجب أن يحتوي CREATE على بيانات
-    // ------------------------------------------
-
-    if (createEntries.length === 0) {
-
-        securityResult.allowed = false;
-        securityResult.reason =
-            'Create operation contains no data';
-
-        return securityResult;
-    }
+        const createEntries =
+            Object.entries(changes);
 
 
-    // ------------------------------------------
-    // فحص كل حقل قبل السماح بإنشاء السجل
-    // ------------------------------------------
+        // ------------------------------------------
+        // يجب أن يحتوي CREATE على بيانات
+        // ------------------------------------------
 
-    for (const [field, value] of createEntries) {
+        if (createEntries.length === 0) {
 
-        // --------------------------------------
-        // 1. التأكد أن الحقل موجود فعليًا
-        // --------------------------------------
+            securityResult.allowed = false;
+            securityResult.reason =
+                'Create operation contains no data';
 
-        const headers =
-            await getTableHeaders(
-                targetTable
+            return securityResult;
+        }
+
+
+        // ------------------------------------------
+        // فحص كل حقل قبل السماح بإنشاء السجل
+        // ------------------------------------------
+
+        for (const [field, value] of createEntries) {
+
+            // --------------------------------------
+            // 1. التأكد أن الحقل موجود فعليًا
+            // --------------------------------------
+
+            const headers =
+                await getTableHeaders(
+                    targetTable
+                );
+
+            if (!headers.includes(field)) {
+
+                securityResult.rejected_fields.push({
+                    field,
+                    reason:
+                        'Field does not exist in target table'
+                });
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // 2. منع AI من إنشاء المفتاح الأساسي
+            // --------------------------------------
+
+            const config =
+                getTableConfig(
+                    targetTable
+                );
+
+            if (field === config.keyColumn) {
+
+                securityResult.rejected_fields.push({
+                    field,
+                    reason:
+                        'Primary key is server-managed'
+                });
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // 3. الحقول المحمية
+            // --------------------------------------
+
+            if (
+                tablePolicy.protectedFields.includes(
+                    field
+                )
+            ) {
+
+                securityResult.rejected_fields.push({
+                    field,
+                    reason:
+                        'Protected field'
+                });
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // 4. الحقول النظامية
+            // --------------------------------------
+
+            const systemProtectedFields = [
+                'Created_At',
+                'Created_By',
+                'Updated_At',
+                'Updated_By',
+                'Delete_Confirmation'
+            ];
+
+            if (
+                systemProtectedFields.includes(
+                    field
+                )
+            ) {
+
+                securityResult.rejected_fields.push({
+                    field,
+                    reason:
+                        'System-managed field cannot be provided by AI'
+                });
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // 5. Strict Whitelist
+            // --------------------------------------
+
+            const usesStrictWhitelist =
+                tablePolicy.allowedWritableFields.length > 0;
+
+            if (
+                usesStrictWhitelist &&
+                !tablePolicy.allowedWritableFields.includes(
+                    field
+                )
+            ) {
+
+                securityResult.rejected_fields.push({
+                    field,
+                    reason:
+                        'Field is not in allowed writable fields'
+                });
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // 6. Stage
+            // --------------------------------------
+
+            if (
+                field === 'Stage' &&
+                tablePolicy.allowedStages.length > 0 &&
+                !tablePolicy.allowedStages.includes(value)
+            ) {
+
+                securityResult.rejected_fields.push({
+                    field,
+                    value,
+                    reason:
+                        'Invalid Stage value'
+                });
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // 7. Status
+            // --------------------------------------
+
+            if (
+                field === 'Status' &&
+                tablePolicy.allowedStatuses.length > 0 &&
+                !tablePolicy.allowedStatuses.includes(value)
+            ) {
+
+                securityResult.rejected_fields.push({
+                    field,
+                    value,
+                    reason:
+                        'Invalid Status value'
+                });
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // الحقل اجتاز الفحص
+            // --------------------------------------
+
+            securityResult.validated_changes[field] =
+                value;
+        }
+
+
+        // ------------------------------------------
+        // إذا رُفض أي حقل نرفض CREATE بالكامل
+        // ------------------------------------------
+
+        if (
+            securityResult.rejected_fields.length > 0
+        ) {
+
+            securityResult.allowed = false;
+            securityResult.server_risk_level = 'high';
+            securityResult.confirmation_required = true;
+            securityResult.execution_allowed_now = false;
+
+            securityResult.reason =
+                'One or more create fields were rejected by server policy';
+
+            return securityResult;
+        }
+
+
+        // ------------------------------------------
+        // فحص الحقول المالية
+        // ------------------------------------------
+
+        const createFields =
+            Object.keys(
+                securityResult.validated_changes
             );
 
-        if (!headers.includes(field)) {
-
-            securityResult.rejected_fields.push({
-                field,
-                reason:
-                    'Field does not exist in target table'
-            });
-
-            continue;
-        }
-
-
-        // --------------------------------------
-        // 2. منع AI من إنشاء المفتاح الأساسي
-        // --------------------------------------
-
-        const config =
-            getTableConfig(
-                targetTable
+        const containsFinancialField =
+            createFields.some(
+                field =>
+                    tablePolicy.financialFields.includes(
+                        field
+                    )
             );
 
-        if (field === config.keyColumn) {
 
-            securityResult.rejected_fields.push({
-                field,
-                reason:
-                    'Primary key is server-managed'
-            });
+        securityResult.allowed = true;
 
-            continue;
-        }
+        securityResult.server_risk_level =
+            containsFinancialField
+                ? 'high'
+                : 'medium';
 
-
-        // --------------------------------------
-        // 3. الحقول المحمية
-        // --------------------------------------
-
-        if (
-            tablePolicy.protectedFields.includes(
-                field
-            )
-        ) {
-
-            securityResult.rejected_fields.push({
-                field,
-                reason:
-                    'Protected field'
-            });
-
-            continue;
-        }
-
-
-        // --------------------------------------
-        // 4. الحقول النظامية
-        // --------------------------------------
-
-        const systemProtectedFields = [
-            'Created_At',
-            'Created_By',
-            'Updated_At',
-            'Updated_By',
-            'Delete_Confirmation'
-        ];
-
-        if (
-            systemProtectedFields.includes(
-                field
-            )
-        ) {
-
-            securityResult.rejected_fields.push({
-                field,
-                reason:
-                    'System-managed field cannot be provided by AI'
-            });
-
-            continue;
-        }
-
-
-        // --------------------------------------
-        // 5. Strict Whitelist
-        // --------------------------------------
-
-        const usesStrictWhitelist =
-            tablePolicy.allowedWritableFields.length > 0;
-
-        if (
-            usesStrictWhitelist &&
-            !tablePolicy.allowedWritableFields.includes(
-                field
-            )
-        ) {
-
-            securityResult.rejected_fields.push({
-                field,
-                reason:
-                    'Field is not in allowed writable fields'
-            });
-
-            continue;
-        }
-
-
-        // --------------------------------------
-        // 6. Stage
-        // --------------------------------------
-
-        if (
-            field === 'Stage' &&
-            tablePolicy.allowedStages.length > 0 &&
-            !tablePolicy.allowedStages.includes(value)
-        ) {
-
-            securityResult.rejected_fields.push({
-                field,
-                value,
-                reason:
-                    'Invalid Stage value'
-            });
-
-            continue;
-        }
-
-
-        // --------------------------------------
-        // 7. Status
-        // --------------------------------------
-
-        if (
-            field === 'Status' &&
-            tablePolicy.allowedStatuses.length > 0 &&
-            !tablePolicy.allowedStatuses.includes(value)
-        ) {
-
-            securityResult.rejected_fields.push({
-                field,
-                value,
-                reason:
-                    'Invalid Status value'
-            });
-
-            continue;
-        }
-
-
-        // --------------------------------------
-        // الحقل اجتاز الفحص
-        // --------------------------------------
-
-        securityResult.validated_changes[field] =
-            value;
-    }
-
-
-    // ------------------------------------------
-    // إذا رُفض أي حقل نرفض CREATE بالكامل
-    // ------------------------------------------
-
-    if (
-        securityResult.rejected_fields.length > 0
-    ) {
-
-        securityResult.allowed = false;
-        securityResult.server_risk_level = 'high';
         securityResult.confirmation_required = true;
+
+        // التنفيذ يبقى مغلقًا حتى التأكيد
         securityResult.execution_allowed_now = false;
 
         securityResult.reason =
-            'One or more create fields were rejected by server policy';
+            containsFinancialField
+                ? 'Create contains financial data and requires explicit confirmation'
+                : 'Create passed field validation and requires confirmation';
 
         return securityResult;
     }
-
-
-    // ------------------------------------------
-    // فحص الحقول المالية
-    // ------------------------------------------
-
-    const createFields =
-        Object.keys(
-            securityResult.validated_changes
-        );
-
-    const containsFinancialField =
-        createFields.some(
-            field =>
-                tablePolicy.financialFields.includes(
-                    field
-                )
-        );
-
-
-    securityResult.allowed = true;
-
-    securityResult.server_risk_level =
-        containsFinancialField
-            ? 'high'
-            : 'medium';
-
-    securityResult.confirmation_required = true;
-
-    // التنفيذ يبقى مغلقًا حتى التأكيد
-    securityResult.execution_allowed_now = false;
-
-    securityResult.reason =
-        containsFinancialField
-            ? 'Create contains financial data and requires explicit confirmation'
-            : 'Create passed field validation and requires confirmation';
-
-    return securityResult;
-}
 
 
     // ==================================================
@@ -3366,126 +3366,126 @@ async function authorizeAIAction(action) {
 
 
 
-        // ------------------------------------------
-// التحقق من هوية مستخدم AppSheet
-// ------------------------------------------
+    // ------------------------------------------
+    // التحقق من هوية مستخدم AppSheet
+    // ------------------------------------------
 
-const channel =
-    String(action.Channel || '')
-    .trim()
-    .toLowerCase();
+    const channel =
+        String(action.Channel || '')
+            .trim()
+            .toLowerCase();
 
-const requesterEmail =
-    String(action.Requester_Email || '')
-    .trim()
-    .toLowerCase();
+    const requesterEmail =
+        String(action.Requester_Email || '')
+            .trim()
+            .toLowerCase();
 
-const employeeAppSheetEmail =
-    String(employee.AppSheet_Email || '')
-    .trim()
-    .toLowerCase();
+    const employeeAppSheetEmail =
+        String(employee.AppSheet_Email || '')
+            .trim()
+            .toLowerCase();
 
 
-if (channel === 'appsheet') {
+    if (channel === 'appsheet') {
 
-    if (!requesterEmail) {
+        if (!requesterEmail) {
 
-        return {
-            authorized: false,
-            user_type: userType,
-            employee_id: employeeId,
-            employee: null,
-            reason:
-                'Requester_Email is required for AppSheet commands'
-        };
+            return {
+                authorized: false,
+                user_type: userType,
+                employee_id: employeeId,
+                employee: null,
+                reason:
+                    'Requester_Email is required for AppSheet commands'
+            };
+        }
+
+
+        if (
+            !employeeAppSheetEmail ||
+            requesterEmail !== employeeAppSheetEmail
+        ) {
+
+            return {
+                authorized: false,
+                user_type: userType,
+                employee_id: employeeId,
+                employee: null,
+                reason:
+                    'Requester_Email does not match employee AppSheet_Email'
+            };
+        }
     }
 
 
-    if (
-        !employeeAppSheetEmail ||
-        requesterEmail !== employeeAppSheetEmail
-    ) {
 
-        return {
-            authorized: false,
-            user_type: userType,
-            employee_id: employeeId,
-            employee: null,
-            reason:
-                'Requester_Email does not match employee AppSheet_Email'
-        };
+
+
+    // ------------------------------------------
+    // التحقق من هوية الموظف عبر WhatsApp
+    // ------------------------------------------
+
+    if (channel === 'واتساب') {
+
+        const normalizePhone = value =>
+            String(value || '')
+                .replace(/[^\d]/g, '')
+                .trim();
+
+        const requesterWhatsApp =
+            normalizePhone(
+                action.WhatsApp_Number
+            );
+
+        const employeeWhatsApp =
+            normalizePhone(
+                employee.WhatsApp_Number
+            );
+
+        const employeeMobile =
+            normalizePhone(
+                employee.Mobile
+            );
+
+
+        // يجب أن يصل رقم المرسل
+        if (!requesterWhatsApp) {
+
+            return {
+                authorized: false,
+                user_type: userType,
+                employee_id: employeeId,
+                employee: null,
+                reason:
+                    'WhatsApp_Number is required for WhatsApp employee commands'
+            };
+        }
+
+
+        // يجب أن يطابق رقمًا مسجلًا للموظف
+        const phoneMatches =
+            (
+                employeeWhatsApp &&
+                requesterWhatsApp === employeeWhatsApp
+            ) ||
+            (
+                employeeMobile &&
+                requesterWhatsApp === employeeMobile
+            );
+
+
+        if (!phoneMatches) {
+
+            return {
+                authorized: false,
+                user_type: userType,
+                employee_id: employeeId,
+                employee: null,
+                reason:
+                    'WhatsApp_Number does not match employee record'
+            };
+        }
     }
-}
-
-
-
-
-
-// ------------------------------------------
-// التحقق من هوية الموظف عبر WhatsApp
-// ------------------------------------------
-
-if (channel === 'واتساب') {
-
-    const normalizePhone = value =>
-        String(value || '')
-        .replace(/[^\d]/g, '')
-        .trim();
-
-    const requesterWhatsApp =
-        normalizePhone(
-            action.WhatsApp_Number
-        );
-
-    const employeeWhatsApp =
-        normalizePhone(
-            employee.WhatsApp_Number
-        );
-
-    const employeeMobile =
-        normalizePhone(
-            employee.Mobile
-        );
-
-
-    // يجب أن يصل رقم المرسل
-    if (!requesterWhatsApp) {
-
-        return {
-            authorized: false,
-            user_type: userType,
-            employee_id: employeeId,
-            employee: null,
-            reason:
-                'WhatsApp_Number is required for WhatsApp employee commands'
-        };
-    }
-
-
-    // يجب أن يطابق رقمًا مسجلًا للموظف
-    const phoneMatches =
-        (
-            employeeWhatsApp &&
-            requesterWhatsApp === employeeWhatsApp
-        ) ||
-        (
-            employeeMobile &&
-            requesterWhatsApp === employeeMobile
-        );
-
-
-    if (!phoneMatches) {
-
-        return {
-            authorized: false,
-            user_type: userType,
-            employee_id: employeeId,
-            employee: null,
-            reason:
-                'WhatsApp_Number does not match employee record'
-        };
-    }
-}
 
 
 
@@ -3498,8 +3498,8 @@ if (channel === 'واتساب') {
 
         const normalized =
             String(value || '')
-            .trim()
-            .toLowerCase();
+                .trim()
+                .toLowerCase();
 
         return [
             'true',
@@ -3767,191 +3767,191 @@ app.post('/api/appsheet/ai-action', async (req, res) => {
 
 
 
-// ==================================================
-// Authorization Layer
-// ==================================================
+        // ==================================================
+        // Authorization Layer
+        // ==================================================
 
-// ==================================================
-// Authorization Layer
-// ==================================================
+        // ==================================================
+        // Authorization Layer
+        // ==================================================
 
-let authorizationResult = null;
-let permissionResult = null;
+        let authorizationResult = null;
+        let permissionResult = null;
 
-const employeeId =
-    String(
-        action.Employee_ID || ''
-    ).trim();
+        const employeeId =
+            String(
+                action.Employee_ID || ''
+            ).trim();
 
-const personId =
-    String(
-        action.Person_ID || ''
-    ).trim();
-
-
-// --------------------------------------------------
-// منع الهوية المزدوجة
-// --------------------------------------------------
-
-if (employeeId && personId) {
-
-    securityResult.allowed = false;
-    securityResult.execution_allowed_now = false;
-    securityResult.reason =
-        'AI action cannot contain both Employee_ID and Person_ID';
-
-    console.log(
-        'Execution blocked: ambiguous requester identity'
-    );
-}
+        const personId =
+            String(
+                action.Person_ID || ''
+            ).trim();
 
 
-// --------------------------------------------------
-// مسار الموظف
-// --------------------------------------------------
+        // --------------------------------------------------
+        // منع الهوية المزدوجة
+        // --------------------------------------------------
 
-else if (employeeId) {
-
-    authorizationResult =
-        await authorizeAIAction(action);
-
-    console.log(
-        'Employee Authorization Decision:',
-        authorizationResult
-    );
-
-
-    if (!authorizationResult.authorized) {
-
-        securityResult.allowed = false;
-        securityResult.execution_allowed_now = false;
-        securityResult.reason =
-            authorizationResult.reason;
-
-        console.log(
-            'Execution blocked by Employee Authorization:',
-            authorizationResult.reason
-        );
-
-    } else {
-
-        permissionResult =
-            evaluateEmployeePermission(
-                authorizationResult,
-                securityResult
-            );
-
-        console.log(
-            'Employee Permission Decision:',
-            permissionResult
-        );
-
-
-        if (!permissionResult.allowed) {
+        if (employeeId && personId) {
 
             securityResult.allowed = false;
             securityResult.execution_allowed_now = false;
             securityResult.reason =
-                permissionResult.reason;
+                'AI action cannot contain both Employee_ID and Person_ID';
 
             console.log(
-                'Execution blocked by Employee Permissions:',
-                {
-                    required:
-                        permissionResult.required_permissions,
-
-                    missing:
-                        permissionResult.missing_permissions
-                }
+                'Execution blocked: ambiguous requester identity'
             );
         }
-    }
-}
 
 
-// --------------------------------------------------
-// مسار العميل
-// --------------------------------------------------
+        // --------------------------------------------------
+        // مسار الموظف
+        // --------------------------------------------------
 
-else if (personId) {
+        else if (employeeId) {
 
-    authorizationResult =
-        await authorizeCustomerAIAction(action);
+            authorizationResult =
+                await authorizeAIAction(action);
 
-    console.log(
-        'Customer Authorization Decision:',
-        authorizationResult
-    );
-
-
-    if (!authorizationResult.authorized) {
-
-        securityResult.allowed = false;
-        securityResult.execution_allowed_now = false;
-        securityResult.reason =
-            authorizationResult.reason;
-
-        console.log(
-            'Execution blocked by Customer Authorization:',
-            authorizationResult.reason
-        );
-
-    } else {
-
-        permissionResult =
-            await evaluateCustomerPermission(
-                authorizationResult,
-                securityResult,
-                aiResult
+            console.log(
+                'Employee Authorization Decision:',
+                authorizationResult
             );
 
-        console.log(
-            'Customer Permission Decision:',
-            permissionResult
-        );
+
+            if (!authorizationResult.authorized) {
+
+                securityResult.allowed = false;
+                securityResult.execution_allowed_now = false;
+                securityResult.reason =
+                    authorizationResult.reason;
+
+                console.log(
+                    'Execution blocked by Employee Authorization:',
+                    authorizationResult.reason
+                );
+
+            } else {
+
+                permissionResult =
+                    evaluateEmployeePermission(
+                        authorizationResult,
+                        securityResult
+                    );
+
+                console.log(
+                    'Employee Permission Decision:',
+                    permissionResult
+                );
 
 
-        if (!permissionResult.allowed) {
+                if (!permissionResult.allowed) {
+
+                    securityResult.allowed = false;
+                    securityResult.execution_allowed_now = false;
+                    securityResult.reason =
+                        permissionResult.reason;
+
+                    console.log(
+                        'Execution blocked by Employee Permissions:',
+                        {
+                            required:
+                                permissionResult.required_permissions,
+
+                            missing:
+                                permissionResult.missing_permissions
+                        }
+                    );
+                }
+            }
+        }
+
+
+        // --------------------------------------------------
+        // مسار العميل
+        // --------------------------------------------------
+
+        else if (personId) {
+
+            authorizationResult =
+                await authorizeCustomerAIAction(action);
+
+            console.log(
+                'Customer Authorization Decision:',
+                authorizationResult
+            );
+
+
+            if (!authorizationResult.authorized) {
+
+                securityResult.allowed = false;
+                securityResult.execution_allowed_now = false;
+                securityResult.reason =
+                    authorizationResult.reason;
+
+                console.log(
+                    'Execution blocked by Customer Authorization:',
+                    authorizationResult.reason
+                );
+
+            } else {
+
+                permissionResult =
+                    await evaluateCustomerPermission(
+                        authorizationResult,
+                        securityResult,
+                        aiResult
+                    );
+
+                console.log(
+                    'Customer Permission Decision:',
+                    permissionResult
+                );
+
+
+                if (!permissionResult.allowed) {
+
+                    securityResult.allowed = false;
+                    securityResult.execution_allowed_now = false;
+                    securityResult.reason =
+                        permissionResult.reason;
+
+                    console.log(
+                        'Execution blocked by Customer Permissions:',
+                        {
+                            table:
+                                permissionResult.table,
+
+                            recordId:
+                                permissionResult.record_id,
+
+                            rejectedFields:
+                                permissionResult.rejected_fields
+                        }
+                    );
+                }
+            }
+        }
+
+
+        // --------------------------------------------------
+        // لا توجد هوية يمكن التحقق منها
+        // --------------------------------------------------
+
+        else {
 
             securityResult.allowed = false;
             securityResult.execution_allowed_now = false;
             securityResult.reason =
-                permissionResult.reason;
+                'Verified requester identity is required';
 
             console.log(
-                'Execution blocked by Customer Permissions:',
-                {
-                    table:
-                        permissionResult.table,
-
-                    recordId:
-                        permissionResult.record_id,
-
-                    rejectedFields:
-                        permissionResult.rejected_fields
-                }
+                'Execution blocked: no Employee_ID or Person_ID'
             );
+
         }
-    }
-}
-
-
-// --------------------------------------------------
-// لا توجد هوية يمكن التحقق منها
-// --------------------------------------------------
-
-else {
-
-    securityResult.allowed = false;
-    securityResult.execution_allowed_now = false;
-    securityResult.reason =
-        'Verified requester identity is required';
-
-    console.log(
-        'Execution blocked: no Employee_ID or Person_ID'
-    );
-
-}
 
 
 
@@ -4013,23 +4013,23 @@ else {
 
 
             // ------------------------------------------
-// كتابة سجل التدقيق بعد نجاح التعديل
-// ------------------------------------------
+            // كتابة سجل التدقيق بعد نجاح التعديل
+            // ------------------------------------------
 
-await writeAuditLogs({
-    action,
-    executionResult,
-    authorizationResult
-});
-
-
+            await writeAuditLogs({
+                action,
+                executionResult,
+                authorizationResult
+            });
 
 
 
-console.log(
-    'Audit logging completed:',
-    action.AI_Action_ID
-);
+
+
+            console.log(
+                'Audit logging completed:',
+                action.AI_Action_ID
+            );
 
 
             await updateAIActionExecution(
@@ -4062,136 +4062,139 @@ console.log(
             );
 
 
-        } else {
+        
 
-            // ------------------------------------------
-            // رفض أمني حقيقي
-            // ------------------------------------------
+
+    } else {
+
+        // ------------------------------------------
+        // رفض أمني حقيقي
+        // ------------------------------------------
 
         if (securityResult.allowed === false) {
 
-    console.log(
-        'Execution rejected by Security Policy:',
-        securityResult.reason
-    );
-
-    await updateAIActionExecution(
-        action.AI_Action_ID,
-        'ملغي',
-        JSON.stringify({
-            reason:
-                securityResult.reason,
-
-            rejectedFields:
-                securityResult.rejected_fields || []
-        }),
-        ''
-    );
-
-    console.log(
-        'AI Action marked as cancelled:',
-        action.AI_Action_ID
-    );
-
-
-    // ------------------------------------------
-    // تسجيل العملية المرفوضة في سجل التدقيق
-    // ------------------------------------------
-
-    try {
-
-        await writeRejectedAuditLog({
-            action,
-            securityResult,
-            authorizationResult,
-            reason:
+            console.log(
+                'Execution rejected by Security Policy:',
                 securityResult.reason
-        });
+            );
 
-        console.log(
-            'Rejected action audit logging completed:',
-            action.AI_Action_ID
-        );
+            await updateAIActionExecution(
+                action.AI_Action_ID,
+                'ملغي',
+                JSON.stringify({
+                    reason:
+                        securityResult.reason,
 
-    } catch (auditError) {
+                    rejectedFields:
+                        securityResult.rejected_fields || []
+                }),
+                ''
+            );
 
-        console.error(
-            'Failed to write rejected Audit Log:',
-            auditError.message
-        );
-    }
+            console.log(
+                'AI Action marked as cancelled:',
+                action.AI_Action_ID
+            );
 
-}
+
             // ------------------------------------------
-            // العملية مسموحة لكن تنتظر التأكيد
+            // تسجيل العملية المرفوضة في سجل التدقيق
             // ------------------------------------------
 
-            else if (
-                securityResult.confirmation_required === true &&
-                confirmationResult.confirmed !== true
-            ) {
+            try {
+
+                await writeRejectedAuditLog({
+                    action,
+                    securityResult,
+                    authorizationResult,
+                    reason:
+                        securityResult.reason
+                });
 
                 console.log(
-                    'Execution waiting for confirmation:',
+                    'Rejected action audit logging completed:',
                     action.AI_Action_ID
                 );
 
-                // لا نكتب "ملغي" ولا "فشل"
-                // ولا ننفذ أي تعديل
-            }
+            } catch (auditError) {
 
-            // ------------------------------------------
-            // أي حالة أخرى لم يسمح لها بالتنفيذ
-            // ------------------------------------------
-
-            else {
-
-                console.log(
-                    'Execution not authorized:',
-                    {
-                        securityAllowed:
-                            securityResult.allowed,
-
-                        confirmed:
-                            confirmationResult.confirmed,
-
-                        executionAllowed:
-                            confirmationResult.execution_allowed
-                    }
+                console.error(
+                    'Failed to write rejected Audit Log:',
+                    auditError.message
                 );
             }
+
+        }
+        // ------------------------------------------
+        // العملية مسموحة لكن تنتظر التأكيد
+        // ------------------------------------------
+
+        else if (
+            securityResult.confirmation_required === true &&
+            confirmationResult.confirmed !== true
+        ) {
+
+            console.log(
+                'Execution waiting for confirmation:',
+                action.AI_Action_ID
+            );
+
+            // لا نكتب "ملغي" ولا "فشل"
+            // ولا ننفذ أي تعديل
         }
 
         // ------------------------------------------
-        // إرجاع نتيجة التحليل + قرار السيرفر
+        // أي حالة أخرى لم يسمح لها بالتنفيذ
         // ------------------------------------------
 
-        return res.status(200).json({
+        else {
 
-            success: true,
+            console.log(
+                'Execution not authorized:',
+                {
+                    securityAllowed:
+                        securityResult.allowed,
 
-            message:
-                'AI action analyzed and checked by server security policy',
+                    confirmed:
+                        confirmationResult.confirmed,
 
-            AI_Action_ID:
-                action.AI_Action_ID,
+                    executionAllowed:
+                        confirmationResult.execution_allowed
+                }
+            );
+        }
+    }
 
-            status:
-                'security_checked',
+    // ------------------------------------------
+    // إرجاع نتيجة التحليل + قرار السيرفر
+    // ------------------------------------------
 
-            analysis: aiResult,
+    return res.status(200).json({
 
-            security:
-                securityResult,
+        success: true,
 
-            confirmation:
-                confirmationResult
-        });
+        message:
+            'AI action analyzed and checked by server security policy',
+
+        AI_Action_ID:
+            action.AI_Action_ID,
+
+        status:
+            'security_checked',
+
+        analysis: aiResult,
+
+        security:
+            securityResult,
+
+        confirmation:
+            confirmationResult
+    });
 
 
 
 
-   } catch (error) {
+} catch (error) {
 
     console.error(
         'AppSheet AI Action error:',

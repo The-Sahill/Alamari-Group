@@ -3651,33 +3651,60 @@ console.log(
             // رفض أمني حقيقي
             // ------------------------------------------
 
-            if (securityResult.allowed === false) {
+        if (securityResult.allowed === false) {
 
-                console.log(
-                    'Execution rejected by Security Policy:',
-                    securityResult.reason
-                );
+    console.log(
+        'Execution rejected by Security Policy:',
+        securityResult.reason
+    );
 
-                await updateAIActionExecution(
-                    action.AI_Action_ID,
-                    'ملغي',
-                    JSON.stringify({
-                        reason:
-                            securityResult.reason,
+    await updateAIActionExecution(
+        action.AI_Action_ID,
+        'ملغي',
+        JSON.stringify({
+            reason:
+                securityResult.reason,
 
-                        rejectedFields:
-                            securityResult.rejected_fields || []
-                    }),
-                    ''
-                );
+            rejectedFields:
+                securityResult.rejected_fields || []
+        }),
+        ''
+    );
 
-                console.log(
-                    'AI Action marked as cancelled:',
-                    action.AI_Action_ID
-                );
+    console.log(
+        'AI Action marked as cancelled:',
+        action.AI_Action_ID
+    );
 
-            }
 
+    // ------------------------------------------
+    // تسجيل العملية المرفوضة في سجل التدقيق
+    // ------------------------------------------
+
+    try {
+
+        await writeRejectedAuditLog({
+            action,
+            securityResult,
+            authorizationResult,
+            reason:
+                securityResult.reason
+        });
+
+        console.log(
+            'Rejected action audit logging completed:',
+            action.AI_Action_ID
+        );
+
+    } catch (auditError) {
+
+        console.error(
+            'Failed to write rejected Audit Log:',
+            auditError.message
+        );
+    }
+
+}
             // ------------------------------------------
             // العملية مسموحة لكن تنتظر التأكيد
             // ------------------------------------------

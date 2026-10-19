@@ -1591,7 +1591,7 @@ async function getAIActionById(aiActionId) {
 
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `'${sheetName}'!A:V`
+        range: `'${sheetName}'!A:ZZ`
     });
 
     const rows = response.data.values || [];

@@ -1271,6 +1271,162 @@ async function writeAuditLogs({
 
 
 
+async function writeRejectedAuditLog({
+    action,
+    securityResult,
+    authorizationResult,
+    reason
+}) {
+
+    const sheetName = 'سجل التدقيق';
+
+    // تحديد الهوية من نتيجة التحقق الموثوقة قدر الإمكان
+    let performedByType = '';
+    let performedById = '';
+
+    if (
+        authorizationResult &&
+        authorizationResult.employee_id
+    ) {
+        performedByType = 'موظف';
+        performedById =
+            String(authorizationResult.employee_id);
+
+    } else if (
+        authorizationResult &&
+        authorizationResult.person_id
+    ) {
+        performedByType = 'عميل';
+        performedById =
+            String(authorizationResult.person_id);
+
+    } else if (action.Employee_ID) {
+        // هوية مطلوبة ولكن لم يتم التحقق منها
+        performedByType = 'موظف';
+        performedById =
+            String(action.Employee_ID);
+
+    } else if (action.Person_ID) {
+        performedByType = 'عميل';
+        performedById =
+            String(action.Person_ID);
+    }
+
+
+    const tableName =
+        String(
+            securityResult?.target_table ||
+            action.Target_Table ||
+            ''
+        );
+
+    const recordId =
+        String(
+            securityResult?.target_record_id ||
+            action.Target_Record_ID ||
+            ''
+        );
+
+
+    const auditId =
+        `audit-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 10)}`;
+
+
+    const row = [[
+
+        // Audit_ID
+        auditId,
+
+        // Table_Name
+        tableName,
+
+        // Record_ID
+        recordId,
+
+        // Action_Type
+        'رفض',
+
+        // Field_Name
+        '',
+
+        // Old_Value
+        '',
+
+        // New_Value
+        '',
+
+        // Performed_By_Type
+        performedByType,
+
+        // Performed_By_ID
+        performedById,
+
+        // Channel
+        String(action.Channel || ''),
+
+        // AI_Action_ID
+        String(action.AI_Action_ID || ''),
+
+        // Date_Time
+        new Date().toISOString(),
+
+        // Device_Info
+        '',
+
+        // Notes
+        String(
+            reason ||
+            securityResult?.reason ||
+            'AI action rejected'
+        )
+    ]];
+
+
+    await sheets.spreadsheets.values.append({
+
+        spreadsheetId:
+            SPREADSHEET_ID,
+
+        range:
+            `'${sheetName}'!A:N`,
+
+        valueInputOption:
+            'USER_ENTERED',
+
+        insertDataOption:
+            'INSERT_ROWS',
+
+        requestBody: {
+            values: row
+        }
+    });
+
+
+    console.log(
+        'Rejected Audit Log written:',
+        {
+            AI_Action_ID:
+                action.AI_Action_ID,
+
+            table:
+                tableName,
+
+            recordId:
+                recordId,
+
+            reason:
+                reason ||
+                securityResult?.reason
+        }
+    );
+}
+
+
+
+
+
 // ======================================================
 // AI Action Execution Tracking
 // ======================================================

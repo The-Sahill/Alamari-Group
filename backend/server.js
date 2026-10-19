@@ -3282,6 +3282,23 @@ else {
             );
 
 
+
+            // ------------------------------------------
+// كتابة سجل التدقيق بعد نجاح التعديل
+// ------------------------------------------
+
+await writeAuditLogs({
+    action,
+    executionResult,
+    authorizationResult
+});
+
+console.log(
+    'Audit logging completed:',
+    action.AI_Action_ID
+);
+
+
             await updateAIActionExecution(
                 action.AI_Action_ID,
                 'تم التنفيذ',

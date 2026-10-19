@@ -2604,17 +2604,258 @@ async function evaluateAISecurity(action, aiResult) {
     // 6. CREATE
     // ==================================================
 
-    if (operation === 'create') {
+    // ==================================================
+// 6. CREATE
+// ==================================================
 
-        securityResult.allowed = true;
-        securityResult.server_risk_level = 'medium';
-        securityResult.confirmation_required = true;
-        securityResult.execution_allowed_now = false;
+if (operation === 'create') {
+
+    const createEntries =
+        Object.entries(changes);
+
+
+    // ------------------------------------------
+    // يجب أن يحتوي CREATE على بيانات
+    // ------------------------------------------
+
+    if (createEntries.length === 0) {
+
+        securityResult.allowed = false;
         securityResult.reason =
-            'Create operation requires confirmation';
+            'Create operation contains no data';
 
         return securityResult;
     }
+
+
+    // ------------------------------------------
+    // فحص كل حقل قبل السماح بإنشاء السجل
+    // ------------------------------------------
+
+    for (const [field, value] of createEntries) {
+
+        // --------------------------------------
+        // 1. التأكد أن الحقل موجود فعليًا
+        // --------------------------------------
+
+        const headers =
+            await getTableHeaders(
+                targetTable
+            );
+
+        if (!headers.includes(field)) {
+
+            securityResult.rejected_fields.push({
+                field,
+                reason:
+                    'Field does not exist in target table'
+            });
+
+            continue;
+        }
+
+
+        // --------------------------------------
+        // 2. منع AI من إنشاء المفتاح الأساسي
+        // --------------------------------------
+
+        const config =
+            getTableConfig(
+                targetTable
+            );
+
+        if (field === config.keyColumn) {
+
+            securityResult.rejected_fields.push({
+                field,
+                reason:
+                    'Primary key is server-managed'
+            });
+
+            continue;
+        }
+
+
+        // --------------------------------------
+        // 3. الحقول المحمية
+        // --------------------------------------
+
+        if (
+            tablePolicy.protectedFields.includes(
+                field
+            )
+        ) {
+
+            securityResult.rejected_fields.push({
+                field,
+                reason:
+                    'Protected field'
+            });
+
+            continue;
+        }
+
+
+        // --------------------------------------
+        // 4. الحقول النظامية
+        // --------------------------------------
+
+        const systemProtectedFields = [
+            'Created_At',
+            'Created_By',
+            'Updated_At',
+            'Updated_By',
+            'Delete_Confirmation'
+        ];
+
+        if (
+            systemProtectedFields.includes(
+                field
+            )
+        ) {
+
+            securityResult.rejected_fields.push({
+                field,
+                reason:
+                    'System-managed field cannot be provided by AI'
+            });
+
+            continue;
+        }
+
+
+        // --------------------------------------
+        // 5. Strict Whitelist
+        // --------------------------------------
+
+        const usesStrictWhitelist =
+            tablePolicy.allowedWritableFields.length > 0;
+
+        if (
+            usesStrictWhitelist &&
+            !tablePolicy.allowedWritableFields.includes(
+                field
+            )
+        ) {
+
+            securityResult.rejected_fields.push({
+                field,
+                reason:
+                    'Field is not in allowed writable fields'
+            });
+
+            continue;
+        }
+
+
+        // --------------------------------------
+        // 6. Stage
+        // --------------------------------------
+
+        if (
+            field === 'Stage' &&
+            tablePolicy.allowedStages.length > 0 &&
+            !tablePolicy.allowedStages.includes(value)
+        ) {
+
+            securityResult.rejected_fields.push({
+                field,
+                value,
+                reason:
+                    'Invalid Stage value'
+            });
+
+            continue;
+        }
+
+
+        // --------------------------------------
+        // 7. Status
+        // --------------------------------------
+
+        if (
+            field === 'Status' &&
+            tablePolicy.allowedStatuses.length > 0 &&
+            !tablePolicy.allowedStatuses.includes(value)
+        ) {
+
+            securityResult.rejected_fields.push({
+                field,
+                value,
+                reason:
+                    'Invalid Status value'
+            });
+
+            continue;
+        }
+
+
+        // --------------------------------------
+        // الحقل اجتاز الفحص
+        // --------------------------------------
+
+        securityResult.validated_changes[field] =
+            value;
+    }
+
+
+    // ------------------------------------------
+    // إذا رُفض أي حقل نرفض CREATE بالكامل
+    // ------------------------------------------
+
+    if (
+        securityResult.rejected_fields.length > 0
+    ) {
+
+        securityResult.allowed = false;
+        securityResult.server_risk_level = 'high';
+        securityResult.confirmation_required = true;
+        securityResult.execution_allowed_now = false;
+
+        securityResult.reason =
+            'One or more create fields were rejected by server policy';
+
+        return securityResult;
+    }
+
+
+    // ------------------------------------------
+    // فحص الحقول المالية
+    // ------------------------------------------
+
+    const createFields =
+        Object.keys(
+            securityResult.validated_changes
+        );
+
+    const containsFinancialField =
+        createFields.some(
+            field =>
+                tablePolicy.financialFields.includes(
+                    field
+                )
+        );
+
+
+    securityResult.allowed = true;
+
+    securityResult.server_risk_level =
+        containsFinancialField
+            ? 'high'
+            : 'medium';
+
+    securityResult.confirmation_required = true;
+
+    // التنفيذ يبقى مغلقًا حتى التأكيد
+    securityResult.execution_allowed_now = false;
+
+    securityResult.reason =
+        containsFinancialField
+            ? 'Create contains financial data and requires explicit confirmation'
+            : 'Create passed field validation and requires confirmation';
+
+    return securityResult;
+}
 
 
     // ==================================================

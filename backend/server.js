@@ -1426,6 +1426,157 @@ async function writeRejectedAuditLog({
 
 
 
+async function writeFailedAuditLog({
+    action,
+    error,
+    authorizationResult
+}) {
+
+    const sheetName = 'سجل التدقيق';
+
+    // ------------------------------------------
+    // تحديد منفذ العملية
+    // ------------------------------------------
+
+    let performedByType = '';
+    let performedById = '';
+
+    if (
+        authorizationResult &&
+        authorizationResult.employee_id
+    ) {
+        performedByType = 'موظف';
+        performedById =
+            String(authorizationResult.employee_id);
+
+    } else if (
+        authorizationResult &&
+        authorizationResult.person_id
+    ) {
+        performedByType = 'عميل';
+        performedById =
+            String(authorizationResult.person_id);
+
+    } else if (action?.Employee_ID) {
+        performedByType = 'موظف';
+        performedById =
+            String(action.Employee_ID);
+
+    } else if (action?.Person_ID) {
+        performedByType = 'عميل';
+        performedById =
+            String(action.Person_ID);
+    }
+
+
+    // ------------------------------------------
+    // تجهيز معلومات الخطأ
+    // ------------------------------------------
+
+    const errorMessage =
+        String(
+            error?.message ||
+            error ||
+            'Unknown execution error'
+        );
+
+
+    const auditId =
+        `audit-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 10)}`;
+
+
+    const row = [[
+
+        // Audit_ID
+        auditId,
+
+        // Table_Name
+        String(action?.Target_Table || ''),
+
+        // Record_ID
+        String(action?.Target_Record_ID || ''),
+
+        // Action_Type
+        'فشل',
+
+        // Field_Name
+        '',
+
+        // Old_Value
+        '',
+
+        // New_Value
+        '',
+
+        // Performed_By_Type
+        performedByType,
+
+        // Performed_By_ID
+        performedById,
+
+        // Channel
+        String(action?.Channel || ''),
+
+        // AI_Action_ID
+        String(action?.AI_Action_ID || ''),
+
+        // Date_Time
+        new Date().toISOString(),
+
+        // Device_Info
+        '',
+
+        // Notes
+        `Technical execution error: ${errorMessage}`
+    ]];
+
+
+    // ------------------------------------------
+    // الكتابة في سجل التدقيق
+    // ------------------------------------------
+
+    await sheets.spreadsheets.values.append({
+
+        spreadsheetId:
+            SPREADSHEET_ID,
+
+        range:
+            `'${sheetName}'!A:N`,
+
+        valueInputOption:
+            'USER_ENTERED',
+
+        insertDataOption:
+            'INSERT_ROWS',
+
+        requestBody: {
+            values: row
+        }
+    });
+
+
+    console.log(
+        'Failed Audit Log written:',
+        {
+            AI_Action_ID:
+                action?.AI_Action_ID || '',
+
+            table:
+                action?.Target_Table || '',
+
+            recordId:
+                action?.Target_Record_ID || '',
+
+            error:
+                errorMessage
+        }
+    );
+}
+
+
+
 
 
 

@@ -1107,6 +1107,184 @@ async function updateRecordById(
 
 
 
+async function createRecord(
+    tableName,
+    validatedData
+) {
+
+    if (
+        !validatedData ||
+        typeof validatedData !== 'object' ||
+        Array.isArray(validatedData) ||
+        Object.keys(validatedData).length === 0
+    ) {
+        throw new Error(
+            'No validated data was provided for create'
+        );
+    }
+
+
+    // ------------------------------------------
+    // إعدادات الجدول
+    // ------------------------------------------
+
+    const config =
+        getTableConfig(tableName);
+
+
+    // ------------------------------------------
+    // قراءة Header الحقيقي من Google Sheets
+    // ------------------------------------------
+
+    const headerResponse =
+        await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `'${config.sheetName}'!1:1`
+        });
+
+    const headers =
+        headerResponse.data.values?.[0] || [];
+
+
+    if (headers.length === 0) {
+        throw new Error(
+            `No headers found for table: ${tableName}`
+        );
+    }
+
+
+    // ------------------------------------------
+    // التحقق من جميع الحقول
+    // ------------------------------------------
+
+    for (const field of Object.keys(validatedData)) {
+
+        if (!headers.includes(field)) {
+            throw new Error(
+                `Column not found: ${field}`
+            );
+        }
+    }
+
+
+    // ------------------------------------------
+    // المفتاح الأساسي
+    // لا نسمح للـ AI باختراعه
+    // ------------------------------------------
+
+    if (
+        Object.prototype.hasOwnProperty.call(
+            validatedData,
+            config.keyColumn
+        )
+    ) {
+        throw new Error(
+            `AI cannot provide key column: ${config.keyColumn}`
+        );
+    }
+
+
+    // ------------------------------------------
+    // إنشاء ID من السيرفر
+    // ------------------------------------------
+
+    const generatedId =
+        `${String(tableName).toLowerCase()}-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 8)}`;
+
+
+    // ------------------------------------------
+    // تجهيز السجل حسب ترتيب Headers الحقيقي
+    // ------------------------------------------
+
+    const recordData = {
+        ...validatedData,
+        [config.keyColumn]:
+            generatedId
+    };
+
+
+    const row =
+        headers.map(header => {
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    recordData,
+                    header
+                )
+            ) {
+                return recordData[header];
+            }
+
+            return '';
+        });
+
+
+    // ------------------------------------------
+    // إضافة السجل
+    // ------------------------------------------
+
+    const appendResponse =
+        await sheets.spreadsheets.values.append({
+
+            spreadsheetId:
+                SPREADSHEET_ID,
+
+            range:
+                `'${config.sheetName}'!A:ZZ`,
+
+            valueInputOption:
+                'USER_ENTERED',
+
+            insertDataOption:
+                'INSERT_ROWS',
+
+            requestBody: {
+                values: [row]
+            }
+        });
+
+
+    console.log(
+        'Generic Create Engine: SUCCESS',
+        {
+            table:
+                tableName,
+
+            recordId:
+                generatedId,
+
+            sheetName:
+                config.sheetName
+        }
+    );
+
+
+    return {
+        success: true,
+
+        operation:
+            'create',
+
+        table:
+            tableName,
+
+        recordId:
+            generatedId,
+
+        sheetName:
+            config.sheetName,
+
+        newValues:
+            recordData,
+
+        updatedRange:
+            appendResponse.data.updates?.updatedRange || ''
+    };
+}
+
+
 
 
 
